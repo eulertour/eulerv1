@@ -1,0 +1,132 @@
+From 3ee7870be897b3e96b174739cd129f5a354400d7 Mon Sep 17 00:00:00 2001
+From: Akhil Dabral <dabral.akhil13@gmail.com>
+Date: Fri, 3 Feb 2017 17:05:46 +0800
+Subject: [PATCH] Added support for DoubleClick on tree node. Event callback
+ can be passed using "onDblClick" prop.
+
+---
+ src/components/decorators.js |  4 +++-
+ src/components/header.js     |  4 +++-
+ src/components/node.js       | 13 +++++++++++--
+ src/components/treebeard.js  |  2 ++
+ 4 files changed, 19 insertions(+), 4 deletions(-)
+
+diff --git a/src/components/decorators.js b/src/components/decorators.js
+index 0ebe13f..30f6c44 100644
+--- a/src/components/decorators.js
++++ b/src/components/decorators.js
+@@ -62,11 +62,12 @@ class Container extends React.Component {
+         super(props);
+     }
+     render(){
+-        const {style, decorators, terminal, onClick, node} = this.props;
++        const {style, decorators, terminal, onClick,onDoubleClick, node} = this.props;
+         return (
+             <div
+                 ref="clickable"
+                 onClick={onClick}
++                onDoubleClick={onDoubleClick}
+                 style={style.container}>
+                 { !terminal ? this.renderToggle() : null }
+                 <decorators.Header
+@@ -98,6 +99,7 @@ Container.propTypes = {
+     decorators: React.PropTypes.object.isRequired,
+     terminal: React.PropTypes.bool.isRequired,
+     onClick: React.PropTypes.func.isRequired,
++    onDoubleClick: React.PropTypes.func,
+     animations: React.PropTypes.oneOfType([
+         React.PropTypes.object,
+         React.PropTypes.bool
+diff --git a/src/components/header.js b/src/components/header.js
+index 8b4acb3..4816dd7 100644
+--- a/src/components/header.js
++++ b/src/components/header.js
+@@ -31,6 +31,7 @@ class NodeHeader extends React.Component {
+                 decorators={decorators}
+                 terminal={terminal}
+                 onClick={this.props.onClick}
++                onDoubleClick={this.props.onDoubleClick}
+                 animations={this.props.animations}
+                 node={this.props.node}
+             />
+@@ -46,7 +47,8 @@ NodeHeader.propTypes = {
+         React.PropTypes.bool
+     ]).isRequired,
+     node: React.PropTypes.object.isRequired,
+-    onClick: React.PropTypes.func
++    onClick: React.PropTypes.func,
++    onDoubleClick : React.PropTypes.fun
+ };
+ 
+ export default NodeHeader;
+diff --git a/src/components/node.js b/src/components/node.js
+index 16393aa..5953d8c 100644
+--- a/src/components/node.js
++++ b/src/components/node.js
+@@ -9,12 +9,17 @@ class TreeNode extends React.Component {
+     constructor(props){
+         super(props);
+         this.onClick = this.onClick.bind(this);
++        this.onDoubleClick = this.onDoubleClick.bind(this);
+     }
+     onClick(){
+         let toggled = !this.props.node.toggled;
+         let onToggle = this.props.onToggle;
+         if(onToggle){ onToggle(this.props.node, toggled); }
+     }
++    onDoubleClick(){
++        let onDblClick = this.props.onDblClick;
++        if(onDblClick){ onDblClick(this.props.node); }
++    }
+     animations(){
+         const props = this.props;
+         if(props.animations === false){ return false; }
+@@ -60,6 +65,7 @@ class TreeNode extends React.Component {
+                 style={this.props.style}
+                 node={Object.assign({}, this.props.node)}
+                 onClick={this.onClick}
++                onDoubleClick={this.onDoubleClick}
+             />
+         );
+     }
+@@ -92,7 +98,9 @@ class TreeNode extends React.Component {
+         );
+     }
+     _eventBubbles(){
+-        return { onToggle: this.props.onToggle };
++        return { onToggle: this.props.onToggle ,
++                onDblClick : this.props.onDblClick
++            };
+     }
+ }
+ 
+@@ -104,7 +112,8 @@ TreeNode.propTypes = {
+         React.PropTypes.object,
+         React.PropTypes.bool
+     ]).isRequired,
+-    onToggle: React.PropTypes.func
++    onToggle: React.PropTypes.func,
++    onDblClick: React.PropTypes.func
+ };
+ 
+ export default TreeNode;
+diff --git a/src/components/treebeard.js b/src/components/treebeard.js
+index 7573f55..5fa4971 100644
+--- a/src/components/treebeard.js
++++ b/src/components/treebeard.js
+@@ -22,6 +22,7 @@ class TreeBeard extends React.Component {
+                         key={node.id || index}
+                         node={node}
+                         onToggle={this.props.onToggle}
++                        onDblClick={this.props.onDblClick}
+                         animations={this.props.animations}
+                         decorators={this.props.decorators}
+                         style={this.props.style.tree.node}
+@@ -43,6 +44,7 @@ TreeBeard.propTypes = {
+         React.PropTypes.bool
+     ]),
+     onToggle: React.PropTypes.func,
++    onDblClick: React.PropTypes.func,
+     decorators: React.PropTypes.object
+ };
+ 
