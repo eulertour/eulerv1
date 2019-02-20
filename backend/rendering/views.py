@@ -26,7 +26,7 @@ from rq import Queue
 
 from rendering.permissions import IsOwner
 from manimlab_api import settings
-from .models import Module, Profile, Project
+from .models import Module, Profile, Project, get_valid_media_path
 from .serializers import (
     UserSerializer, 
     SaveModuleSerializer, 
@@ -167,9 +167,8 @@ class LogIn(views.APIView):
             password=password,
         )
         if user is None:
-            return Response({
-                'info': 'Invalid credentials',
-            })
+            return Response(
+                { 'info': 'Invalid credentials' })
         serializer = TokenObtainPairSerializer(data=request.data)
 
         try:
@@ -230,7 +229,7 @@ class Session(generics.RetrieveAPIView):
         else:
             response_data = {'username': request.user.username}
             profile = Profile.objects.get(user=request.user)
-            if profile.last_project is None:
+            if profile.last_module is None:
                 use_defaults = True
 
         if use_defaults:
@@ -265,9 +264,14 @@ class Session(generics.RetrieveAPIView):
                 os.path.basename(profile.last_module.source.name),
             )
             response_scene = profile.last_scene
+        if not os.path.exists(project_file_path):
+            project_file_path = os.path.join(
+                project_source_path,
+                settings.DEFAULT_PROJECT_FILENAME,
+            )
         with open(project_file_path) as response_file:
             response_data.update({
-                'filename': os.path.basename(project_file_path),
+                'filename': os.path.relpath(project_file_path, project_source_path),
                 'code': response_file.read(),
                 'scene': response_scene,
                 'files': [LIBRARY_DIR_ENTRY] +
@@ -321,21 +325,28 @@ class NewSave(generics.GenericAPIView):
     permission_classes = (IsAuthenticated,)
 
     def post(self, request):
-        name = request.data['name']
-        defaults = {
-            'time': timezone.now(),
-            'source': ContentFile(request.data['code'], name=name),
-        }
+        if ("name" not in request.data):
+            return Response(
+                {'error': 'request is missing filename'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         try:
             project = Project.objects.get(
                 owner=request.user,
                 name=request.data['project']
             )
-            module, created = Module.objects.update_or_create(
-                owner=request.user,
-                project=project,
-                source__endswith=os.sep + name,
-                defaults=defaults,
+        except Exception:
+            return Response(
+                {'error': 'invalid project'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            media_path = get_valid_media_path(
+                project.name,
+                request.user.username,
+                request.data['name'],
             )
         except Exception:
             return Response(
@@ -343,14 +354,72 @@ class NewSave(generics.GenericAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        profile = Profile.objects.get(user=request.user)
-        profile.last_module = module
-        profile.last_scene = request.data['scene']
-        profile.last_project = project
-        profile.save()
 
-        module_serializer = SaveModuleSerializer(module)
-        return Response(module_serializer.data)
+        if request.data['directory']:
+            os.mkdir(os.path.join(settings.MEDIA_ROOT, media_path))
+            return Response(request.data)
+        else:
+            defaults = {
+                'time': timezone.now(),
+                'source': ContentFile(
+                    request.data.get('code', ""),
+                    name=request.data['name'],
+                ),
+            }
+            try:
+                module, created = Module.objects.update_or_create(
+                    owner=request.user,
+                    project=project,
+                    source__endswith=os.sep + request.data['name'],
+                    defaults=defaults,
+                )
+            except Exception:
+                return Response(
+                    {'error': 'invalid filename'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            profile = Profile.objects.get(user=request.user)
+            profile.last_module = module
+            if 'scene' in request.data:
+                profile.last_scene = request.data['scene']
+            profile.last_project = project
+            profile.save()
+
+            module_serializer = SaveModuleSerializer(module)
+            return Response(module_serializer.data)
+
+    ## def post(self, request):
+    ##     name = request.data['name']
+    ##     defaults = {
+    ##         'time': timezone.now(),
+    ##         'source': ContentFile(request.data['code'], name=name),
+    ##     }
+    ##     try:
+    ##         project = Project.objects.get(
+    ##             owner=request.user,
+    ##             name=request.data['project']
+    ##         )
+    ##         module, created = Module.objects.update_or_create(
+    ##             owner=request.user,
+    ##             project=project,
+    ##             source__endswith=os.sep + name,
+    ##             defaults=defaults,
+    ##         )
+    ##     except Exception:
+    ##         return Response(
+    ##             {'error': 'invalid filename'},
+    ##             status=status.HTTP_400_BAD_REQUEST,
+    ##         )
+
+    ##     profile = Profile.objects.get(user=request.user)
+    ##     profile.last_module = module
+    ##     profile.last_scene = request.data['scene']
+    ##     profile.last_project = project
+    ##     profile.save()
+
+    ##     module_serializer = SaveModuleSerializer(module)
+    ##     return Response(module_serializer.data)
 
 class Files(generics.GenericAPIView):
     authentication_classes = (JWTAuthentication,)
@@ -440,10 +509,14 @@ class CheckRenderJob(generics.GenericAPIView):
         q = Queue(connection=Redis())
         job = q.fetch_job(job_id)
         if job:
-            return Response({
+            response_data = {
                 'status': job.status,
                 'result': job.result,
-            })
+            }
+            if job.status == 'finished':
+                response_data['scene'] = job.args[1]
+                response_data['filename'] = job.args[0]
+            return Response(response_data)
         else:
             return Response({'error': 'no job'})
 

@@ -3,6 +3,7 @@ import grp
 import os
 import pwd
 import pytz
+import shutil
 
 from django.contrib.auth.models import User
 from django.core.files.base import ContentFile
@@ -140,14 +141,27 @@ class ProjectSerializer(serializers.ModelSerializer):
             project_path,
             settings.VIDEO_DIR,
         )
+        files_path = os.path.join(
+            project_path,
+            settings.FILES_DIR,
+        )
+        designs_path = os.path.join(
+            project_path,
+            settings.DESIGNS_DIR,
+        )
         try:
             os.makedirs(source_path)
             os.makedirs(video_path)
+            os.makedirs(files_path)
+            os.makedirs(designs_path)
         except:
             pass
         else:
-            # TODO: do this with groups
-            os.chmod(project_path, 0o777)
+            shutil.chown(project_path, user=None, group=settings.RENDER_GROUP)
+            shutil.chown(video_path, user=None, group=settings.RENDER_GROUP)
+            shutil.chown(files_path, user=None, group=settings.RENDER_GROUP)
+            shutil.chown(designs_path, user=None, group=settings.RENDER_GROUP)
+            # source should be read-only to the renderer
 
         # create modules
         if 'base_project' in validated_data:

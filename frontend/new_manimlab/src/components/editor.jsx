@@ -4,6 +4,8 @@ import renderIcon from '../assets/icon-render@3x.svg';
 import saveIcon from '../assets/icon-save@3x.svg';
 import settingsIcon from '../assets/icon-settings@3x.svg';
 import TreeExample from '../components/tree.jsx';
+import collapseTreeIcon from '../assets/icon-left@3x.svg';
+import * as consts from '../constants.js';
 require('codemirror/lib/codemirror.css');
 require('codemirror/theme/material.css');
 require('codemirror/theme/neat.css');
@@ -15,56 +17,74 @@ require('codemirror/addon/scroll/simplescrollbars.css');
 
 class Editor extends Component {
     state = {
-        renaming: false,
         menuOpen: false,
+        treeCollapsed: false,
+        gutterWidth: -1,
+        autosaveTimer: -1,
     }
 
     constructor(props, context) {
         super(props, context);
         this.getFileBanner = this.getFileBanner.bind(this);
+        this.handleTreeToggle = this.handleTreeToggle.bind(this);
+    }
+
+    componentDidUpdate() {
+        // a hack to make sure the expand button and gutter have equal width
+        let gutter = document.getElementsByClassName("CodeMirror-gutter CodeMirror-linenumbers")[0];
+        let gutterWidth = window.getComputedStyle(gutter).width;
+        gutterWidth = gutterWidth.slice(0, gutterWidth.length - 2);
+        gutterWidth = Math.round(parseFloat(gutterWidth));
+        if (gutterWidth !== this.state.gutterWidth) {
+            this.setState({gutterWidth: gutterWidth});
+        }
+    }
+
+    setAutosaveTimeout() {
+        clearTimeout(this.state.autosaveTimer);
+        let autosaveTimer = setTimeout(
+            () => { this.props.onSave(); },
+            consts.AUTOSAVE_TIMEOUT_MS
+        );
+        this.setState({autosaveTimer: autosaveTimer});
+        this.props.onSetAutosaveTimeout();
+    }
+
+    handleTreeToggle() {
+        this.setState({treeCollapsed: !this.state.treeCollapsed});
     }
 
     getFileBanner() {
+        let collapseArrow = null;
         let filename;
-        let renameButton;
-        if (!this.state.renaming) {
-            filename = (
+        if (this.state.treeCollapsed) {
+            collapseArrow = (
+                <div
+                    style={{
+                        width: this.state.gutterWidth + 'px',
+                    }}
+                    className="expand-button"
+                    onClick={this.handleTreeToggle}
+                >
+                    <img
+                        className="expand-icon reverse"
+                        src={collapseTreeIcon}
+                        alt="collapse tree"
+                    />
+                </div>
+            )
+        }
+        filename = (
+            <div className="arrow-and-filename">
+                {collapseArrow}
                 <div
                     className="filename"
                     key="filename"
-                >{this.props.filename}</div>
-            );
-            renameButton = (
-                <button
-                    className="file-banner-button rename-button"
-                    key="rename"
-                    onClick={() => {
-                        this.setState({renaming: true});
-                    }}
-                >rename</button>
-            );
-        } else {
-            filename = (
-                <input
-                    className="file-banner-button filename-input"
-                    key="filename"
-                    type="text"
-                    value={this.props.filename}
-                    onChange={this.props.onFilenameChange}
-                />
-            );
-            renameButton = (
-                <button
-                    className="file-banner-button file-rename"
-                    key="rename"
-                    onClick={() => {
-                        this.setState({
-                            renaming: false,
-                        });
-                    }}
-                >finish</button>
-            );
-        }
+                >
+                    {this.props.filename}
+                </div>
+            </div>
+        );
         let saveButton = (
             <img
                 className="file-banner-button"
@@ -84,7 +104,9 @@ class Editor extends Component {
             <div className="filename-container">
                 {filename}
                 <div className="editor-buttons">
-                    {renameButton}
+                    <div className="save-message-container">
+                        {this.props.saveMessage}
+                    </div>
                     {saveButton}
                     {settingsButton}
                 </div>
@@ -96,15 +118,23 @@ class Editor extends Component {
         return (
             <div className="manim-input">
                 <div className="editor-container">
-                    <div className="tree-part">
-                        <TreeExample
-                            files={this.props.files}
-                            cursor={this.props.cursor}
-                            onExpandDirectory={this.props.onExpandDirectory}
-                            onSelectNode={this.props.onSelectNode}
-                            onDoubleClick={this.props.onDoubleClick}
-                        />
-                    </div>
+                    <TreeExample
+                        files={this.props.files}
+                        cursor={this.props.cursor}
+                        collapsed={this.state.treeCollapsed}
+                        newFileName={this.props.newFileName}
+                        namingNewFile={this.props.namingNewFile}
+
+                        onExpandDirectory={this.props.onExpandDirectory}
+                        onSelectNode={this.props.onSelectNode}
+                        onTreeToggle={this.handleTreeToggle}
+                        onNewFile={this.props.onNewFile}
+                        onNewDirectory={this.props.onNewDirectory}
+                        onToggle={this.props.onToggle}
+                        onDirectoryName={this.props.onDirectoryName}
+                        onFileName={this.props.onFileName}
+                        onNewFileNameChange={this.props.onNewFileNameChange}
+                    />
                     <div className="editor-part">
                         {this.getFileBanner()}
                         <CodeMirror
@@ -119,6 +149,13 @@ class Editor extends Component {
                             }}
                             onBeforeChange={(editor, data, value) => {
                                 this.props.onCodeChange(value);
+                            }}
+                            onChange={(editor, data, value) => {
+                                // only autosave after typing, not changing
+                                // files
+                                if (data.origin !== undefined) {
+                                    this.setAutosaveTimeout();
+                                }
                             }}
                         />
                     </div>

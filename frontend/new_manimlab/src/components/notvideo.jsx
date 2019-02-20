@@ -17,18 +17,20 @@ class NotVideo extends Component {
 
     render() {
         let title = <div className="title">{this.props.scene}</div>;
-        let video;
+        let video_content;
         let delimiter;
         if (this.props.returncode !== 0 ||
             this.props.scene === consts.DEFAULT_SELECTED_SCENE) {
             delimiter = '\n';
-            video = <div className="video-placeholder">
-                        <img
-                            className="play-button"
-                            src={playButton}
-                            alt="play button"
-                        />
-                    </div>;
+            video_content = (
+                <div className="video-placeholder">
+                    <img
+                        className="play-button"
+                        src={playButton}
+                        alt="play button"
+                    />
+                </div>
+            );
         } else {
             delimiter = '\r';
             let url = this.getVideoURL(
@@ -37,13 +39,20 @@ class NotVideo extends Component {
                 this.props.filename,
                 this.props.scene,
             )
-            video = <Player
-                        playsInline
-                        src={url}
-                        fluid={false}
-                        height={"calc(100% - 180px)"}
-                    />;
+            video_content = (
+                <Player
+                    playsInline
+                    src={url}
+                    fluid={false}
+                    height={"100%"}
+                />
+            );
         }
+        let video = (
+            <div className="video-container">
+                {video_content}
+            </div>
+        );
         let logs = (
             <div className="logs-container">
             <div className="manim-logs">

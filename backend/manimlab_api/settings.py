@@ -22,7 +22,9 @@ SHARED_MEDIA_DIR = 'shared/'
 USER_MEDIA_DIR = 'user/'
 PROJECT_DIR = 'projects/'
 SOURCE_DIR = 'source/'
-VIDEO_DIR = 'video/'
+VIDEO_DIR = 'videos/'
+FILES_DIR = 'files/'
+DESIGNS_DIR = 'designs/'
 LIBRARY_DIR = os.path.join(
     SHARED_MEDIA_DIR,
     'manim/',
@@ -31,6 +33,8 @@ LIBRARY_DIR = os.path.join(
 DEFAULT_PROJECT = 'default'
 DEFAULT_PROJECT_FILENAME = 'example_scenes.py'
 DEFAULT_PROJECT_SCENE = 'SquareToCircle'
+
+RENDER_GROUP = 'etr-render'
 
 
 # Quick-start development settings - unsuitable for production

@@ -1,6 +1,5 @@
 export const RENDER_URL = 'http://eulertour.com:8000/api/render/';
 export const CHECK_RENDER_URL = 'http://eulertour.com:8000/api/checkrender/';
-export const CHECK_RENDER_INTERVAL_MS = 2000;
 export const SAVE_URL = 'http://eulertour.com:8000/api/save/';
 export const LOGIN_URL = 'http://eulertour.com:8000/api/login/';
 export const SIGNUP_URL = 'http://eulertour.com:8000/api/signup/';
@@ -11,6 +10,9 @@ export const SESSION_URL = 'http://eulertour.com:8000/api/session/';
 export const TOKEN_API_URL = 'http://eulertour.com:8000/api-token-auth/';
 export const GET_USER_URL = 'http://eulertour.com:8000/api/users/userfromtoken/';
 export const HELLO_URL = 'http://eulertour.com:8000/api/hello/';
+
+export const CHECK_RENDER_INTERVAL_MS = 2 * 1000;
+export const AUTOSAVE_TIMEOUT_MS = 5 * 1000;
 
 // export const DEFAULT_LOGS =  'user@manim:~$ ';
 export const DEFAULT_LOGS =  'Logs will be displayed here';

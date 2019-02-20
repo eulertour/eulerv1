@@ -55,6 +55,7 @@ def render_scene(
     if len(devices) != 2:
         print("some mounts failed")
 
+    # TODO: cd into user directory, or add it to PYTHONPATH
     args = [
             "lxc", "exec", container, "--",
             "docker", "run",
@@ -63,13 +64,12 @@ def render_scene(
             "-e", "MEDIA_DIR=project",
             "-e", "FILE_DIR=project",
             "eulertour/manim:latest",
-            "-c", "python3 manim/manim.py " +
+            "-c", "umask 002 && python3 manim/manim.py " +
                   f"project/source/{shlex.quote(input_filename)} " +
                   f"{shlex.quote(input_scene)} -pl",
         ]
     # print(" ".join(args))
-    # if "auser" in project_path:
-    #     breakpoint(context=9)
+    # breakpoint(context=9)
 
     # can't this be subprocess.run(capture_output=True)?
     proc = subprocess.Popen(args,

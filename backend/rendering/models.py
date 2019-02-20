@@ -1,6 +1,8 @@
 import uuid
 from importlib import import_module
 import os
+import shutil
+import sys
 
 from django.db import models
 from django.contrib.auth import get_user_model
@@ -20,28 +22,81 @@ class Project(models.Model):
     )
     name = models.CharField(max_length=100)
 
+    def delete(self):
+        project_path = os.path.join(
+            settings.MEDIA_ROOT,
+            settings.USER_MEDIA_DIR,
+            self.owner.username,
+            settings.PROJECT_DIR,
+            self.name,
+        )
+        breakpoint(context=9)
+        shutil.rmtree(project_path)
+        super(Project, self).delete()
+
     class Meta:
         unique_together = ('owner', 'name')
 
+def get_valid_media_path(project_name, username, filename):
+    user_directory = os.path.normpath(os.path.join(
+        settings.USER_MEDIA_DIR,
+        username,
+        settings.PROJECT_DIR,
+        project_name,
+        settings.SOURCE_DIR,
+    ))
+    media_path = os.path.normpath(os.path.join(
+        user_directory,
+        filename,
+    ))
+
+    valid = True
+    # can't overwrite user directory
+    if (media_path == user_directory):
+        valid = False
+    # must be underneath user directory
+    if not os.path.realpath(media_path).startswith(
+        os.path.realpath(user_directory)):
+        valid = False
+    # must be within an existing directory
+    parent_dir = os.path.join(
+        settings.MEDIA_ROOT,
+        os.path.dirname(media_path),
+    )
+    if not os.path.exists(parent_dir) and os.path.isdir(parent_dir):
+        valid = False
+    # must not already exist
+    if os.path.exists(media_path):
+        valid = False
+    # must be a single file
+    if not os.path.basename(filename) == filename:
+        valid = False
+
+    if not valid:
+        raise Exception('invalid media path')
+    else:
+        return media_path
+
+
 class Module(models.Model):
     def module_path(instance, filename):
-        # TODO: handle unicode
-        user_directory = os.path.normpath(os.path.join(
-            settings.USER_MEDIA_DIR,
-            instance.owner.username,
-            settings.PROJECT_DIR,
+        return get_valid_media_path(
             instance.project.name,
-            settings.SOURCE_DIR,
-        ))
-        module_path = os.path.normpath(os.path.join(
-            user_directory,
+            instance.owner.username,
             filename,
-        ))
-        if (module_path == user_directory) or \
-                (os.path.dirname(module_path) != user_directory):
-            raise Exception('no')
-        else:
-            return module_path
+        )
+
+    def delete(self):
+        backend_directory = os.path.dirname(os.path.realpath(sys.argv[0]))
+        if (os.path.basename(backend_directory != "backend")):
+            raise Exception("path error: not deleting for safety")
+        module_file_path = os.path.join(
+            backend_directory,
+            settings.MEDIA_ROOT,
+            self.source.name,
+        )
+        os.remove(module_file_path)
+        super(Module, self).delete()
 
     User = get_user_model()
     owner = models.ForeignKey(
@@ -105,8 +160,17 @@ class Profile(models.Model):
         null=True,
     )
 
+    def delete(self):
+        user_dir = os.path.join(
+            settings.MEDIA_ROOT,
+            settings.USER_MEDIA_DIR,
+            self.user.username,
+        )
+        shutil.rmtree(user_dir)
+        super(Profile, self).delete()
+
     def __str__(self):
         if self.user is None:
             return "Profile(" + self.uuid + ")"
         else:
-            return "Profile(" + self.user + ")"
+            return "Profile(" + self.user.username + ")"

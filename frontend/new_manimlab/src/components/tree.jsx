@@ -86,11 +86,23 @@ class TreeExample extends React.Component {
     constructor(props){
         super(props);
         this.state = {};
-        this.onToggle = this.onToggle.bind(this);
+        this.handleToggle = this.handleToggle.bind(this);
+        this.handleNameChange = this.handleNameChange.bind(this);
     }
 
-    onToggle(node, toggled){
-        if ('name' in this.props.cursor) {
+    componentDidUpdate() {
+        if (this.props.namingNewFile) {
+            this.nameInput.focus();
+        }
+    }
+
+    handleNameChange(event) {
+        console.log(event); 
+    } 
+
+    handleToggle(node, toggled){
+        console.log('clicked');
+        if (this.props.cursor !== undefined) {
             let cur_active_node = this.props.cursor;
             cur_active_node.active = false;
         }
@@ -101,41 +113,87 @@ class TreeExample extends React.Component {
         }
     }
 
-    render(){
-        return (
-            <React.Fragment>
-                <div className="tree-banner">
-                    <div id="tree-label">Files</div>
-                    <div className="tree-buttons">
-                        <img
-                            className="file-banner-button"
-                            src={newFileIcon}
-                            alt="new file"
-                        />
-                        <img
-                            className="file-banner-button"
-                            src={newDirIcon}
-                            alt="new directory"
-                        />
-                        <img
-                            className="file-banner-button"
-                            src={collapseTreeIcon}
-                            alt="collapse tree"
-                        />
+    render() {
+        let BaseHeader = Treebeard.defaultProps.decorators.Header;
+        let decorators = Treebeard.defaultProps.decorators;
+        decorators['Header'] = ({node, style}) => {
+            if (node.untitled) {
+                let callback;
+                if ('children' in node) {
+                    callback = () => {this.props.onDirectoryName(node)};
+                } else {
+                    callback = () => {this.props.onFileName(node)};
+                }
+                return (
+                    <input
+                        ref={(input) => {this.nameInput = input}}
+                        value={this.props.newFileName}
+                        onChange={this.props.onNewFileNameChange}
+                        onBlur={callback}
+                    />
+                );
+            } else if (node.active) {
+                style.title['color'] = '#FFFFFF';
+            } else if (node.readOnly) {
+                style.title['color'] = '#666666';
+            } else {
+                style.title['color'] = 'inherit';
+            }
+            return <BaseHeader node={node} style={style}/>;
+        }
+        if (!this.props.collapsed) {
+            return (
+                <div className="tree-part">
+                    <div className="tree-banner">
+                        <div id="tree-label">Files</div>
+                        <div className="tree-buttons">
+                            <div
+                                className="new-file-button"
+                                onClick={this.props.onNewFile}
+                            >
+                                <img
+                                    className="file-banner-button"
+                                    src={newFileIcon}
+                                    alt="new file"
+                                />
+                            </div>
+                            <div
+                                className="new-dir-button"
+                                onClick={this.props.onNewDirectory}
+                            >
+                                <img
+                                    className="folder-banner-button"
+                                    src={newDirIcon}
+                                    alt="new directory"
+                                />
+                            </div>
+                            <div
+                                className="collapse-button"
+                                onClick={this.props.onTreeToggle}
+                            >
+                                <img
+                                    className="collapse-icon"
+                                    src={collapseTreeIcon}
+                                    alt="collapse tree"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    <div className="treebeard-container">
+                        <PerfectScrollbar option={{wheelPropagation: false}} >
+						<Treebeard
+							data={this.props.files}
+							onToggle={this.props.onToggle}
+							style={style}                
+                            decorators={decorators}
+						/>
+                        </PerfectScrollbar>
                     </div>
                 </div>
-                <div className="treebeard-container">
-                    <PerfectScrollbar option={{wheelPropagation: false}} >
-                    <Treebeard
-                        data={this.props.files}
-                        onToggle={this.onToggle}
-                        onDblClick={this.props.onDoubleClick}
-                        style={style}                
-                    />
-                    </PerfectScrollbar>
-                </div>
-            </React.Fragment>
-        );
+            );
+        } else {
+            return null;
+        }
     }
 }
 
