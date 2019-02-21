@@ -69,7 +69,7 @@ const style = {
             header: {
                 base: {
                     display: 'inline-block',
-                    fontSize: '16px',
+                    fontSize: '14px',
                     verticalAlign: 'top',
                 },
                 connector: {

@@ -207,14 +207,14 @@
 
 .tree-part {
   max-height: 100%;
-  flex: 0 0 170px;
-  max-width: 170px;
+  flex: 1;
   display: flex;
   flex-direction: column;
   border-right: 1px solid #e9e9e9;
   background-color: #fbfbfb;
   border-radius: 8px 0 0 0;
   white-space: nowrap;
+  overflow: hidden;
 }
 
 .tree-banner {
@@ -263,10 +263,10 @@
 }
 
 .editor-part {
-  flex: 1 1 200px;
-  min-width: 200px;
+  flex: 2.5;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .filename-container {
