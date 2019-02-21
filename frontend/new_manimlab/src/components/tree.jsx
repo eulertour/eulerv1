@@ -3,7 +3,25 @@ import { Treebeard } from 'react-treebeard';
 import newFileIcon from '../assets/icon-new-file@3x.svg';
 import newDirIcon from '../assets/icon-new-dir@3x.svg';
 import collapseTreeIcon from '../assets/icon-left@3x.svg';
-import PerfectScrollbar from 'react-perfect-scrollbar'
+import PerfectScrollbar from 'react-perfect-scrollbar';
+import _ from 'lodash';
+import { ContextMenu, MenuItem, ContextMenuTrigger } from "react-contextmenu";
+import * as utils from '../utils.js';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { library } from '@fortawesome/fontawesome-svg-core'
+import {
+    faAlignLeft,
+    faFolder,
+    faSuperscript
+} from '@fortawesome/free-solid-svg-icons'
+import { faPython } from '@fortawesome/free-brands-svg-icons'
+
+library.add(
+    faAlignLeft,
+    faFolder,
+    faPython,
+    faSuperscript
+);
 
 const style = {
     tree: {
@@ -33,9 +51,6 @@ const style = {
                 backgroundColor: '#b43daf',
                 color: 'white',
                 fill: 'white',
-            },
-            override: {
-                color: 'blue',
             },
             toggle: {
                 base: {
@@ -114,9 +129,13 @@ class TreeExample extends React.Component {
     }
 
     render() {
-        let BaseHeader = Treebeard.defaultProps.decorators.Header;
         let decorators = Treebeard.defaultProps.decorators;
         decorators['Header'] = ({node, style}) => {
+            if (style === undefined) {
+                return null;
+            } else {
+                style = _.cloneDeep(style);
+            }
             if (node.untitled) {
                 let callback;
                 if ('children' in node) {
@@ -139,7 +158,70 @@ class TreeExample extends React.Component {
             } else {
                 style.title['color'] = 'inherit';
             }
-            return <BaseHeader node={node} style={style}/>;
+            let path = utils.getNodePathList(node).join('/');
+            let iconComponent;
+            let iconName;
+            let iconPrefix = "fas";
+            let className = "tree-text-container";
+            if ('children' in node) {
+                iconName = "folder";
+            } else {
+                className += " tree-left-pad";
+                if (node.name.endsWith(".py")) {
+                    iconPrefix = "fab";
+                    iconName = "python";
+                } else if (node.name.endsWith(".tex")) {
+                    iconName = "superscript";
+                } else {
+                    iconName = "align-left";
+                }
+            }
+            iconComponent = (
+                <FontAwesomeIcon
+                    className="tree-icon"
+                    icon={[iconPrefix, iconName]}
+                />
+            );
+            return (
+                <div>
+                    <ContextMenuTrigger id={path}>
+                        <div style={style.base} id={path}>
+                            <div className={className} style={style.title}>
+                                {iconComponent} <span className="tree-text">{node.name}</span>
+                            </div>
+                        </div>
+                    </ContextMenuTrigger>
+
+                    <ContextMenu id={path}>
+                        <MenuItem
+                            data={{action: 'rename'}}
+                            onClick={(e, data, target) => {
+                                e.stopPropagation();
+                                console.log(data.action + ' ' + target.children[0].id);
+                            }}>
+                            Rename
+                        </MenuItem>
+                        <MenuItem divider />
+                        <MenuItem
+                            data={{action: 'move'}}
+                            onClick={(e, data, target) => {
+                                e.stopPropagation();
+                                console.log(data.action + ' ' + target.children[0].id);
+                            }}>
+                            Move
+                        </MenuItem>
+                        <MenuItem divider />
+                        <MenuItem
+                            data={{action: 'delete'}}
+                            onClick={(e, data, target) => {
+                                e.stopPropagation();
+                                console.log(data.action + ' ' + target.children[0].id);
+                            }}>
+                            Delete
+                        </MenuItem>
+                    </ContextMenu>
+                </div>
+            );
         }
         if (!this.props.collapsed) {
             return (
@@ -181,12 +263,10 @@ class TreeExample extends React.Component {
                     </div>
                     <div className="treebeard-container">
                         <PerfectScrollbar option={{wheelPropagation: false}} >
-						<Treebeard
-							data={this.props.files}
-							onToggle={this.props.onToggle}
-							style={style}                
-                            decorators={decorators}
-						/>
+                            <Treebeard data={this.props.files}
+                                       onToggle={this.props.onToggle}
+                                       style={style}
+                                       decorators={decorators}/>
                         </PerfectScrollbar>
                     </div>
                 </div>

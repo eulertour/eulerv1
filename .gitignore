@@ -1,3 +1,4 @@
 .*.sw?
 *.mp4
 *.pyc
+backend/data/user/*

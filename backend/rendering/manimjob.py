@@ -55,7 +55,7 @@ def render_scene(
     if len(devices) != 2:
         print("some mounts failed")
 
-    # TODO: cd into user directory, or add it to PYTHONPATH
+    # TODO: either cd into user directory or add it to PYTHONPATH
     args = [
             "lxc", "exec", container, "--",
             "docker", "run",

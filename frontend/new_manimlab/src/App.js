@@ -13,6 +13,7 @@ import fileImage from './assets/icon-file@3x.svg';
 import _ from 'lodash';
 import Login from './components/login.jsx';
 import closeIcon from './assets/e-remove.svg';
+import * as utils from './utils.js';
 
 class App extends React.Component {
     static propTypes = {
@@ -185,8 +186,8 @@ class App extends React.Component {
             return;
         }
         let newFiles = _.cloneDeep(this.state.files);
-        let newNode = this.getNodeFromPathList(newFiles, this.getNodePathList(node));
-        let newCursor = this.getNodeFromPathList(newFiles, this.getNodePathList(this.state.cursor));
+        let newNode = this.getNodeFromPathList(newFiles, utils.getNodePathList(node));
+        let newCursor = this.getNodeFromPathList(newFiles, utils.getNodePathList(this.state.cursor));
 
         if (!("children" in node)) {
             newNode.active = true;
@@ -243,7 +244,7 @@ class App extends React.Component {
             namingNewFile: true,
         });
         // let curNode = this.state.cursor;
-        // let pathList = this.getNodePathList(curNode);
+        // let pathList = utils.getNodePathList(curNode);
 
         // let newFiles = _.cloneDeep(this.state.files);
         // let newCurNode = this.getNodeFromPathList(newFiles, pathList);
@@ -353,7 +354,7 @@ class App extends React.Component {
             consts.GET_FILES_URL,
             {
                 project: node.project,
-                pathList: this.getNodePathList(node),
+                pathList: utils.getNodePathList(node),
             },
             {headers: headers},
         )
@@ -363,7 +364,7 @@ class App extends React.Component {
                 displayingLibraryCode = true;
             }
             this.setState({
-                filename: this.getNodePathList(node).join('/'),
+                filename: utils.getNodePathList(node).join('/'),
                 code: response.data['content'],
                 displayingLibraryCode: displayingLibraryCode,
             })
@@ -407,7 +408,7 @@ class App extends React.Component {
     }
 
     fetchDirectoryContents(node) {
-        let pathList = this.getNodePathList(node);
+        let pathList = utils.getNodePathList(node);
         
         let headers = {};
         if (this.props.access.length !== 0) {
@@ -767,6 +768,6 @@ class App extends React.Component {
             </div>
         );
     }
-}
+};
 
 export default withRouter(withCookies(App));

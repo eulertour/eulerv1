@@ -13,6 +13,8 @@ export const HELLO_URL = 'http://eulertour.com:8000/api/hello/';
 
 export const CHECK_RENDER_INTERVAL_MS = 2 * 1000;
 export const AUTOSAVE_TIMEOUT_MS = 5 * 1000;
+export const FILE_MENU = 'menu_for_files';
+export const DIR_MENU = 'menu_for_directories';
 
 // export const DEFAULT_LOGS =  'user@manim:~$ ';
 export const DEFAULT_LOGS =  'Logs will be displayed here';

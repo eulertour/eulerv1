@@ -97,7 +97,7 @@ class WriteStuff(Scene):
     def construct(self):
         example_text = TextMobject(
             "This is a some text",
-            tex_to_color_map={"text": GREEN}
+            tex_to_color_map={"text": RED}
         )
         example_tex = TexMobject(
             "\\sum_{k=1}^\\infty {1 \\over k^2} = {\\pi^2 \\over 6}",
@@ -116,7 +116,7 @@ class UpdatersExample(Scene):
         decimal = DecimalNumber(
             0,
             show_ellipsis=True,
-            num_decimal_places=3,
+            num_decimal_places=5,
             include_sign=True,
         )
         square = Square().to_edge(UP)
