@@ -125,8 +125,9 @@ SESSION_SAVE_EVERY_REQUEST = True
 SESSION_COOKIE_DOMAIN = 'http://eulertour.com:3000/'
 CSRF_COOKIE_DOMAIN = '*'
 CORS_ALLOW_METHODS = (
-    'get',
-    'post',
+    'GET',
+    'POST',
+    'DELETE',
 )
 CORS_ALLOW_HEADERS = default_headers + (
     'Authorization',

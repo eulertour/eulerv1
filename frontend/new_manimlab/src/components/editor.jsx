@@ -20,7 +20,6 @@ class Editor extends Component {
         menuOpen: false,
         treeCollapsed: false,
         gutterWidth: -1,
-        autosaveTimer: -1,
     }
 
     constructor(props, context) {
@@ -38,16 +37,6 @@ class Editor extends Component {
         if (gutterWidth !== this.state.gutterWidth) {
             this.setState({gutterWidth: gutterWidth});
         }
-    }
-
-    setAutosaveTimeout() {
-        clearTimeout(this.state.autosaveTimer);
-        let autosaveTimer = setTimeout(
-            () => { this.props.onSave(); },
-            consts.AUTOSAVE_TIMEOUT_MS
-        );
-        this.setState({autosaveTimer: autosaveTimer});
-        this.props.onSetAutosaveTimeout();
     }
 
     handleTreeToggle() {
@@ -134,6 +123,9 @@ class Editor extends Component {
                         onDirectoryName={this.props.onDirectoryName}
                         onFileName={this.props.onFileName}
                         onNewFileNameChange={this.props.onNewFileNameChange}
+                        onFileRename={this.props.onFileRename}
+                        onFileMove={this.props.onFileMove}
+                        onFileDelete={this.props.onFileDelete}
                     />
                     <div className="editor-part">
                         {this.getFileBanner()}
@@ -154,7 +146,7 @@ class Editor extends Component {
                                 // only autosave after typing, not changing
                                 // files
                                 if (data.origin !== undefined) {
-                                    this.setAutosaveTimeout();
+                                    this.props.onSetAutosaveTimeout();
                                 }
                             }}
                         />

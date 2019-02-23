@@ -12,7 +12,11 @@ import { library } from '@fortawesome/fontawesome-svg-core'
 import {
     faAlignLeft,
     faFolder,
-    faSuperscript
+    faSuperscript,
+    faPencilAlt,
+    faLongArrowAltRight,
+    faArrowRight,
+    faTrash
 } from '@fortawesome/free-solid-svg-icons'
 import { faPython } from '@fortawesome/free-brands-svg-icons'
 
@@ -20,7 +24,11 @@ library.add(
     faAlignLeft,
     faFolder,
     faPython,
-    faSuperscript
+    faSuperscript,
+    faPencilAlt,
+    faLongArrowAltRight,
+    faArrowRight,
+    faTrash
 );
 
 const style = {
@@ -195,28 +203,31 @@ class TreeExample extends React.Component {
                     <ContextMenu id={path}>
                         <MenuItem
                             data={{action: 'rename'}}
-                            onClick={(e, data, target) => {
-                                e.stopPropagation();
-                                console.log(data.action + ' ' + target.children[0].id);
-                            }}>
+                            onClick={this.props.onFileRename}>
+                            <FontAwesomeIcon
+                                className="menu-icon"
+                                icon={["fas", "pencil-alt"]}
+                            />
                             Rename
                         </MenuItem>
                         <MenuItem divider />
                         <MenuItem
                             data={{action: 'move'}}
-                            onClick={(e, data, target) => {
-                                e.stopPropagation();
-                                console.log(data.action + ' ' + target.children[0].id);
-                            }}>
+                            onClick={this.props.onFileMove}>
+                            <FontAwesomeIcon
+                                className="menu-icon"
+                                icon={["fas", "arrow-right"]}
+                            />
                             Move
                         </MenuItem>
                         <MenuItem divider />
                         <MenuItem
                             data={{action: 'delete'}}
-                            onClick={(e, data, target) => {
-                                e.stopPropagation();
-                                console.log(data.action + ' ' + target.children[0].id);
-                            }}>
+                            onClick={this.props.onFileDelete}>
+                            <FontAwesomeIcon
+                                className="menu-icon"
+                                icon={["fas", "trash"]}
+                            />
                             Delete
                         </MenuItem>
                     </ContextMenu>

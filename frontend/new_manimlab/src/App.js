@@ -39,6 +39,7 @@ class App extends React.Component {
             saveMessage: "",
             newFileName: "",
             namingNewFile: false,
+            autosaveTimer: -1,
         }
         this.logOut = this.logOut.bind(this);
         this.restoreSession = this.restoreSession.bind(this);
@@ -53,12 +54,81 @@ class App extends React.Component {
         this.fetchDirectoryContents = this.fetchDirectoryContents.bind(this);
         this.fetchFileContents = this.fetchFileContents.bind(this);
         this.handleModalClick = this.handleModalClick.bind(this);
-        this.handleAutosaveTimeout = this.handleAutosaveTimeout.bind(this);
         this.handleNewFile = this.handleNewFile.bind(this);
         this.handleNewDirectory = this.handleNewDirectory.bind(this);
         this.handleDirectoryName = this.handleDirectoryName.bind(this);
         this.handleToggle = this.handleToggle.bind(this);
         this.handleNewFileNameChange=this.handleNewFileNameChange.bind(this);
+        this.handleFileRename=this.handleFileRename.bind(this);
+        this.handleFileMove=this.handleFileMove.bind(this);
+        this.handleFileDelete=this.handleFileDelete.bind(this);
+        this.handleSetAutosaveTimeout=this.handleSetAutosaveTimeout.bind(this);
+    }
+
+    handleSetAutosaveTimeout() {
+        clearTimeout(this.state.autosaveTimer);
+        let autosaveTimer = setTimeout(
+            () => { this.handleSave(); },
+            consts.AUTOSAVE_TIMEOUT_MS
+        );
+        this.setState({
+            autosaveTimer: autosaveTimer,
+            saveMessage: "",
+        });
+    }
+
+    handleFileRename(e, data, target) {
+        e.stopPropagation();
+        console.log(data.action + ' ' + target.children[0].id);
+    }
+
+    handleFileMove(e, data, target) {
+        e.stopPropagation();
+        console.log(data.action + ' ' + target.children[0].id);
+    }
+
+    handleFileDelete(e, data, target) {
+        e.stopPropagation();
+        console.log(data.action + ' ' + target.children[0].id);
+
+        let filePath = target.children[0].id;
+        let headers;
+        if (this.props.access.length !== 0) {
+            headers = {'Authorization': 'Bearer ' + this.props.access};
+        } else {
+            headers = {};
+        }
+        axios.delete(consts.MODULE_LIST_URL, {
+            params: {
+                project: this.state.project,
+                name: filePath,
+            },
+            headers: headers,
+        })
+        .then(response => {
+            let newFiles = _.cloneDeep(this.state.files);
+            let delNode = this.getNodeFromPathList(
+                newFiles,
+                filePath.split('/'),
+            );
+            if ('directory' in delNode) {
+                _.remove(delNode.directory.children,
+                    (o) => {return _.isEqual(o, delNode)});
+            } else {
+                _.remove(newFiles, (o) => {return _.isEqual(o, delNode)});
+            }
+            clearTimeout(this.state.autosaveTimer);
+            this.setState({
+                files: newFiles,
+                filename: "",
+                code: "",
+            });
+        })
+        .catch(error => {
+            if (error.response !== undefined) {
+                console.log(error.response);
+            }
+        });
     }
 
     handleNewFileNameChange(event) {
@@ -268,10 +338,6 @@ class App extends React.Component {
         //     files: newFiles,
         //     cursor: newCurNode,
         // });
-    }
-
-    handleAutosaveTimeout() {
-        this.setState({saveMessage: ""});
     }
 
     restoreSession(accessToken) {
@@ -755,13 +821,16 @@ class App extends React.Component {
                         onRename={this.handleRename}
                         onExpandDirectory={this.fetchDirectoryContents}
                         onSelectNode={this.handleSelectNode}
-                        onSetAutosaveTimeout={this.handleAutosaveTimeout}
                         onNewFile={this.handleNewFile}
                         onNewDirectory={this.handleNewDirectory}
                         onToggle={this.handleToggle}
                         onDirectoryName={this.handleDirectoryName}
                         onFileName={this.handleDirectoryName}
                         onNewFileNameChange={this.handleNewFileNameChange}
+                        onFileRename={this.handleFileRename}
+                        onFileMove={this.handleFileMove}
+                        onFileDelete={this.handleFileDelete}
+                        onSetAutosaveTimeout={this.handleSetAutosaveTimeout}
                     />
                 </div>
                 {modal}

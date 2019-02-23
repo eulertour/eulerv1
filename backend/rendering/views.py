@@ -548,6 +548,36 @@ class ModuleViewSet(viewsets.ModelViewSet):
         response = super().create(request) # overridden with update_or_create()
         return response
 
+class ModuleDetail(generics.DestroyAPIView):
+    authentication_classes = (JWTAuthentication,)
+    permission_classes = (IsAuthenticated, IsOwner)
+    serializer_class = SaveModuleSerializer
+
+    def get_queryset(self):
+        return Module.objects.filter(soure=self.request.user)
+
+    def get_object(self):
+        project_name = self.request.query_params['project']
+        user = self.request.user
+        source_path = self.request.query_params['name']
+        return Module.objects.get(
+            owner=user,
+            project=Project.objects.get(
+                owner=user,
+                name=project_name
+            ),
+            source=get_valid_media_path(
+                project_name,
+                user.username,
+                source_path,
+            ),
+        )
+    
+    def delete(self, request, *args, **kwargs):
+        # breakpoint(context=9)
+        return super(ModuleDetail, self).delete(request, *args, **kwargs)
+
+
 class ProjectList(generics.ListAPIView):
     authentication_classes = ()
     permission_classes = ()

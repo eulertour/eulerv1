@@ -2,3 +2,5 @@
 *.mp4
 *.pyc
 backend/data/user/*
+backend/db.sqlite3
+gui/

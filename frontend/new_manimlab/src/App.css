@@ -262,6 +262,10 @@
 
 }
 
+.menu-icon {
+  margin-right: 8px;
+}
+
 .editor-part {
   flex: 2.5;
   display: flex;
@@ -694,7 +698,7 @@ input:focus {
 	cursor: pointer;
     font-weight: 400;
     line-height: 1.5;
-    padding: 3px 20px;
+    padding: 3px 12px;
     text-align: inherit;
     white-space: nowrap;
 }
