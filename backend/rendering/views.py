@@ -2,6 +2,7 @@ import os
 import pytz
 import re
 import shlex
+import shutil
 import subprocess
 
 from django.contrib.auth import authenticate, login
@@ -139,7 +140,10 @@ class SignUp(generics.GenericAPIView):
             base_project=settings.DEFAULT_PROJECT)
 
         # create the profile
-        profile_data = {'user': new_user.pk}
+        profile_data = {
+            'user': new_user.pk,
+            'last_project': new_project.pk,
+        }
         profile_serializer = ProfileSerializer(data=profile_data)
         profile_serializer.is_valid(raise_exception=True)
         new_profile = profile_serializer.save()
@@ -201,13 +205,22 @@ def list_directory_contents(path, project):
     for entry in entries:
         if entry in ignored_entries:
             continue
-        obj = {
-            'name': entry,
-            'directory': os.path.isdir(os.path.join(path, entry)),
-            'project': project,
-        }
+        else:
+            obj = {
+                'name': entry,
+                'directory': os.path.isdir(os.path.join(path, entry)),
+                'project': project,
+            }
+            if os.path.isdir(os.path.join(path, entry)):
+                obj['children'] = list_directory_contents(
+                    os.path.join(path, entry),
+                    project,
+                )
         ret.append(obj)
     return ret
+
+def list_directory_tree(path, project):
+    pass
 
 def get_file_contents(file_path):
     return { 'content': open(file_path).read() }
@@ -216,23 +229,28 @@ def list_user_files(username):
     modules_dir = os.path.join(settings.MEDIA_ROOT, username, 'modules')
     return list_directory_contents(modules_dir)
 
+class DirectoryTree(generics.GenericAPIView):
+    def post(self, request):
+        dir_path = os.path.join(
+            settings.MEDIA_ROOT,
+            get_valid_media_path(
+                request.data['project'],
+                request.user.username,
+                request.data['path'],
+            )
+        )
+        assert(os.path.isdir(dir_path))
+        walk = os.walk(dir_path)
+        return Response({'info': walk})
+
 class Session(generics.RetrieveAPIView):
     authentication_classes = (JWTAuthentication,)
     permission_classes = ()
 
     def post(self, request):
-        use_defaults = False
         profile = None
         response_data = {}
         if request.user.is_anonymous:
-            use_defaults = True
-        else:
-            response_data = {'username': request.user.username}
-            profile = Profile.objects.get(user=request.user)
-            if profile.last_module is None:
-                use_defaults = True
-
-        if use_defaults:
             # return the defaults
             project_name = settings.DEFAULT_PROJECT
             project_source_path = os.path.join(
@@ -248,9 +266,15 @@ class Session(generics.RetrieveAPIView):
             )
             response_scene = settings.DEFAULT_PROJECT_SCENE
         else:
+            response_data = {'username': request.user.username}
+            profile = Profile.objects.get(user=request.user)
+            use_defaults = True
             # restore previous session
             # TODO: only allow path-friendly characters for everything
-            project_name = profile.last_project.name
+            if profile.last_project:
+                project_name = profile.last_project.name
+            else:
+                project_name = settings.DEFAULT_PROJECT
             project_source_path = os.path.join(
                 settings.MEDIA_ROOT,
                 settings.USER_MEDIA_DIR, 
@@ -259,16 +283,26 @@ class Session(generics.RetrieveAPIView):
                 project_name,
                 settings.SOURCE_DIR,
             )
-            project_file_path = os.path.join(
-                project_source_path,
-                os.path.basename(profile.last_module.source.name),
-            )
+            if profile.last_module:
+                project_file_path = os.path.join(
+                    project_source_path,
+                    os.path.relpath(
+                        profile.last_module.source.name,
+                        start=project_source_path,
+                    ),
+                )
+                if not os.path.exists(project_file_path):
+                    project_file_path = os.path.join(
+                        project_source_path,
+                        settings.DEFAULT_PROJECT_FILENAME,
+                    )
+            else:
+                project_file_path = os.path.join(
+                    project_source_path,
+                    settings.DEFAULT_PROJECT_FILENAME,
+                )
             response_scene = profile.last_scene
-        if not os.path.exists(project_file_path):
-            project_file_path = os.path.join(
-                project_source_path,
-                settings.DEFAULT_PROJECT_FILENAME,
-            )
+
         with open(project_file_path) as response_file:
             response_data.update({
                 'filename': os.path.relpath(project_file_path, project_source_path),
@@ -548,7 +582,7 @@ class ModuleViewSet(viewsets.ModelViewSet):
         response = super().create(request) # overridden with update_or_create()
         return response
 
-class ModuleDetail(generics.DestroyAPIView):
+class ModuleDelete(generics.DestroyAPIView):
     authentication_classes = (JWTAuthentication,)
     permission_classes = (IsAuthenticated, IsOwner)
     serializer_class = SaveModuleSerializer
@@ -574,8 +608,17 @@ class ModuleDetail(generics.DestroyAPIView):
         )
     
     def delete(self, request, *args, **kwargs):
-        # breakpoint(context=9)
-        return super(ModuleDetail, self).delete(request, *args, **kwargs)
+        if request.query_params['directory']:
+            directory_path = get_valid_media_path(
+                request.query_params['project'],
+                request.user.username,
+                request.query_params['name'],
+            )
+            media_path = os.path.join(settings.MEDIA_ROOT, directory_path)
+            shutil.rmtree(media_path)
+            return Response({'deleted': media_path})
+        else:
+            return super(ModuleDelete, self).delete(request, *args, **kwargs)
 
 
 class ProjectList(generics.ListAPIView):

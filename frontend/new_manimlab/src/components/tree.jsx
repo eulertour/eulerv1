@@ -16,7 +16,9 @@ import {
     faPencilAlt,
     faLongArrowAltRight,
     faArrowRight,
-    faTrash
+    faTrash,
+    faFile,
+    faFolderOpen
 } from '@fortawesome/free-solid-svg-icons'
 import { faPython } from '@fortawesome/free-brands-svg-icons'
 
@@ -28,7 +30,9 @@ library.add(
     faPencilAlt,
     faLongArrowAltRight,
     faArrowRight,
-    faTrash
+    faTrash,
+    faFile,
+    faFolderOpen
 );
 
 const style = {
@@ -108,12 +112,20 @@ const style = {
 class TreeExample extends React.Component {
     constructor(props){
         super(props);
-        this.state = {};
+        this.state = {
+            animating: false,
+        };
         this.handleToggle = this.handleToggle.bind(this);
         this.handleNameChange = this.handleNameChange.bind(this);
     }
 
     componentDidUpdate() {
+        if (!this.props.animating) {
+            this.focusInput();
+        }
+    }
+
+    focusInput() {
         if (this.props.namingNewFile) {
             this.nameInput.focus();
         }
@@ -138,6 +150,22 @@ class TreeExample extends React.Component {
 
     render() {
         let decorators = Treebeard.defaultProps.decorators;
+        let animations = Treebeard.defaultProps.animations;
+        animations.drawer = (/* props */) => ({
+            enter: {
+                animation: 'slideDown',
+                duration: 300,
+                // begin: () => {this.setState({animating: true})},
+                complete: () => {
+                    this.props.onAnimationComplete();
+                    this.focusInput();
+                }
+            },
+            leave: {
+                animation: 'slideUp',
+                duration: 300
+            }
+        });
         decorators['Header'] = ({node, style}) => {
             if (style === undefined) {
                 return null;
@@ -171,25 +199,61 @@ class TreeExample extends React.Component {
             let iconName;
             let iconPrefix = "fas";
             let className = "tree-text-container";
-            if ('children' in node) {
-                iconName = "folder";
+            if (!('children' in node) && node.empty) {
+                iconComponent = null;
             } else {
-                className += " tree-left-pad";
-                if (node.name.endsWith(".py")) {
-                    iconPrefix = "fab";
-                    iconName = "python";
-                } else if (node.name.endsWith(".tex")) {
-                    iconName = "superscript";
+                if ('children' in node) {
+                    iconName = "folder";
                 } else {
-                    iconName = "align-left";
+                    className += " tree-left-pad";
+                    if (node.name.endsWith(".py")) {
+                        iconPrefix = "fab";
+                        iconName = "python";
+                    } else if (node.name.endsWith(".tex")) {
+                        iconName = "superscript";
+                    } else {
+                        iconName = "align-left";
+                    }
                 }
+                iconComponent = (
+                    <FontAwesomeIcon
+                        className="tree-icon"
+                        icon={[iconPrefix, iconName]}
+                    />
+                );
             }
-            iconComponent = (
-                <FontAwesomeIcon
-                    className="tree-icon"
-                    icon={[iconPrefix, iconName]}
-                />
-            );
+            let newFile;
+            let newDir;
+            if ('children' in node) {
+                newFile = (
+                    <React.Fragment>
+                        <MenuItem
+                            data={{action: 'new-file'}}
+                            onClick={this.props.onNewFile}>
+                            <FontAwesomeIcon
+                                className="menu-icon"
+                                icon={["fas", "file"]}
+                            />
+                            New File
+                        </MenuItem>
+                        <MenuItem divider />
+                    </React.Fragment>
+                );
+                newDir = (
+                    <React.Fragment>
+                        <MenuItem
+                            data={{action: 'new-directory'}}
+                            onClick={this.props.onNewFile}>
+                            <FontAwesomeIcon
+                                className="menu-icon"
+                                icon={["fas", "folder-open"]}
+                            />
+                            New Folder
+                        </MenuItem>
+                        <MenuItem divider />
+                    </React.Fragment>
+                );
+            }
             return (
                 <div>
                     <ContextMenuTrigger id={path}>
@@ -201,6 +265,8 @@ class TreeExample extends React.Component {
                     </ContextMenuTrigger>
 
                     <ContextMenu id={path}>
+                        {newFile}
+                        {newDir}
                         <MenuItem
                             data={{action: 'rename'}}
                             onClick={this.props.onFileRename}>
@@ -274,10 +340,17 @@ class TreeExample extends React.Component {
                     </div>
                     <div className="treebeard-container">
                         <PerfectScrollbar option={{wheelPropagation: false}} >
-                            <Treebeard data={this.props.files}
-                                       onToggle={this.props.onToggle}
-                                       style={style}
-                                       decorators={decorators}/>
+                            <Treebeard
+                                data={this.props.files}
+                                    onToggle={(node, toggled) => {
+                                        this.setState({animating: true});
+                                        this.props.onToggle(node, toggled);
+                                    }
+                                }
+                                style={style}
+                                decorators={decorators}
+                                animations={animations}
+                            />
                         </PerfectScrollbar>
                     </div>
                 </div>

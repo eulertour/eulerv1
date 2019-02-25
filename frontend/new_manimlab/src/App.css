@@ -747,3 +747,9 @@ input:focus {
     content: attr(data-count);
     display: block;
 }
+
+.directory-select {
+  height: 350px;
+  width: 440px;
+  background-color: #FFFFFF;
+}

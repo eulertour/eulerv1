@@ -15,7 +15,8 @@ urlpatterns = [
     path('token/refresh/', jwt_views.TokenRefreshView.as_view(), name='token_refresh'),
     path('session/', views.Session.as_view()),
 
-    path('module/', views.ModuleDetail.as_view()),
+    path('module/', views.ModuleDelete.as_view()),
+    path('tree/', views.DirectoryTree.as_view()),
 
     path('profilefromsession/', views.ProfileFromSession.as_view()),
     path('users/', views.UserList.as_view()),

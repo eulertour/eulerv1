@@ -65,12 +65,6 @@ def get_valid_media_path(project_name, username, filename):
     )
     if not os.path.exists(parent_dir) and os.path.isdir(parent_dir):
         valid = False
-    # must not already exist
-    if os.path.exists(media_path):
-        valid = False
-    # must be a single file
-    if not os.path.basename(filename) == filename:
-        valid = False
 
     if not valid:
         raise Exception('invalid media path')

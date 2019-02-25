@@ -113,6 +113,7 @@ class Editor extends Component {
                         collapsed={this.state.treeCollapsed}
                         newFileName={this.props.newFileName}
                         namingNewFile={this.props.namingNewFile}
+                        animating={this.props.animating}
 
                         onExpandDirectory={this.props.onExpandDirectory}
                         onSelectNode={this.props.onSelectNode}
@@ -126,6 +127,7 @@ class Editor extends Component {
                         onFileRename={this.props.onFileRename}
                         onFileMove={this.props.onFileMove}
                         onFileDelete={this.props.onFileDelete}
+                        onAnimationComplete={this.props.onAnimationComplete}
                     />
                     <div className="editor-part">
                         {this.getFileBanner()}

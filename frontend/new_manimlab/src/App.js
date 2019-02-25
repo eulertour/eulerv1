@@ -40,6 +40,8 @@ class App extends React.Component {
             newFileName: "",
             namingNewFile: false,
             autosaveTimer: -1,
+            movingFile: false,
+            animating: false,
         }
         this.logOut = this.logOut.bind(this);
         this.restoreSession = this.restoreSession.bind(this);
@@ -63,6 +65,67 @@ class App extends React.Component {
         this.handleFileMove=this.handleFileMove.bind(this);
         this.handleFileDelete=this.handleFileDelete.bind(this);
         this.handleSetAutosaveTimeout=this.handleSetAutosaveTimeout.bind(this);
+        this.handleAnimationComplete=this.handleAnimationComplete.bind(this);
+        this.listDirs=this.listDirs.bind(this);
+    }
+
+    handleAnimationComplete() {
+        this.setState({animating: false});
+    }
+
+    ensureDirectoryTree(node) {
+        if (node.loading) {
+            this.fetchDirectoryTree(node);
+        } else if ('children' in node) {
+            node.children.forEach((child) => {
+                this.ensureDirectoryTree(child);
+            });
+        }
+    }
+
+    fetchDirectoryTree(node) {
+        let headers = {};
+        if (this.props.access.length !== 0) {
+            headers = {'Authorization': 'Bearer ' + this.props.access};
+        }
+        axios.post(
+            consts.TREE_URL,
+            {
+                // TODO: this should be a path list
+                path: utils.getNodePathList(node).join('/'),
+                project: node.project,
+            },
+            {headers: headers},
+        )
+        .then(response => {
+            console.log(response.data);
+        })
+        .catch(error => {
+        
+        });
+    }
+
+    listDirs(nodeList) {
+        if (nodeList === undefined) {
+            return null;
+        }
+        return (
+            nodeList.map((node) => {
+                if (node.library || !('children' in node)) {
+                    return null;
+                }
+                let children;
+                if (!node.empty) {
+                    children = this.listDirs(node.children);
+                }
+                return (
+                    <li key={node.name}>
+                        <p>{node.name}</p>
+                        {children}
+                    </li>
+                );
+            })
+        );
     }
 
     handleSetAutosaveTimeout() {
@@ -85,6 +148,7 @@ class App extends React.Component {
     handleFileMove(e, data, target) {
         e.stopPropagation();
         console.log(data.action + ' ' + target.children[0].id);
+        this.setState({movingFile: true});
     }
 
     handleFileDelete(e, data, target) {
@@ -92,16 +156,21 @@ class App extends React.Component {
         console.log(data.action + ' ' + target.children[0].id);
 
         let filePath = target.children[0].id;
+        let delNode = this.getNodeFromPathList(
+            this.state.files,
+            filePath.split('/'),
+        );
         let headers;
         if (this.props.access.length !== 0) {
             headers = {'Authorization': 'Bearer ' + this.props.access};
         } else {
             headers = {};
         }
-        axios.delete(consts.MODULE_LIST_URL, {
+        axios.delete(consts.MODULE_DELETE_URL, {
             params: {
                 project: this.state.project,
                 name: filePath,
+                directory: 'children' in delNode,
             },
             headers: headers,
         })
@@ -114,6 +183,14 @@ class App extends React.Component {
             if ('directory' in delNode) {
                 _.remove(delNode.directory.children,
                     (o) => {return _.isEqual(o, delNode)});
+                if (delNode.directory.children.length === 0) {
+                    delNode.directory.children = [{
+                        name: '(empty)',
+                        empty: true,
+                        readOnly: true,
+                    }];
+                    delNode.directory.empty = true;
+                }
             } else {
                 _.remove(newFiles, (o) => {return _.isEqual(o, delNode)});
             }
@@ -138,12 +215,32 @@ class App extends React.Component {
     handleDirectoryName(node) {
         // TODO: will fail for non top-level dirs
         let newFiles = _.cloneDeep(this.state.files);
+        let newNode = this.getNodeFromPathList(
+            newFiles,
+            utils.getNodePathList(node)
+        );
 
         // check if the name is taken
-        if (_.find(this.state.files,
+        let sibling_list;
+        if ('directory' in node) {
+            sibling_list = newNode.directory.children;
+        } else {
+            sibling_list = newFiles;
+        }
+        let valid = true;
+        let errorMsg = "";
+        if (_.find(sibling_list,
             (o) => {return o.name === this.state.newFileName})) {
-            alert('name is taken');
-            _.remove(newFiles, (o) => {return _.isEqual(o, node)});
+            valid = false;
+            errorMsg = "filename is taken";
+        }
+        if (this.state.newFileName.indexOf('/') !== -1) {
+            valid = false;
+            errorMsg = "invalid filename";
+        }
+        if (!valid) {
+            alert(errorMsg);
+            _.remove(sibling_list, (o) => {return _.isEqual(o, node)});
             this.setState({
                 files: newFiles,
                 namingNewFile: false,
@@ -151,7 +248,6 @@ class App extends React.Component {
             });
             return;
         }
-        
 
         let headers;
         if (this.props.access.length !== 0) {
@@ -159,36 +255,43 @@ class App extends React.Component {
         } else {
             headers = {};
         }
+        let pathList = utils.getNodePathList(node);
+        pathList[pathList.length - 1] = this.state.newFileName;
         axios.post(
             consts.SAVE_URL,
             {
                 // TODO: this should be a path list
-                name: this.state.newFileName,
+                name: pathList.join('/'),
                 project: this.state.project,
                 directory: "children" in node,
             },
             {headers: headers},
         )
         .then(response => {
-            let newFiles = _.cloneDeep(this.state.files);
-            let newNode = _.find(newFiles, (o) => {return _.isEqual(o, node)});
             newNode['untitled'] = false;
             newNode['name'] = this.state.newFileName;
             newNode['project'] = this.state.project;
 
             if ('children' in node) {
+                newNode['empty'] = true;
                 // sort the directories
-                // TODO: actually check the number of lib dirs
-                let libraryDirs = newFiles.slice(0, 1);
-                newFiles = newFiles.slice(1);
-                // TODO: handle non top-level dirs
-                let fileIndex = newFiles.findIndex(
+                let libraryDirs;
+                let siblingDirs;
+                if (!('directory' in node)) {
+                    // TODO: actually check the number of lib dirs
+                    libraryDirs = newFiles.slice(0, 1);
+                    siblingDirs = newFiles.slice(1);
+                } else {
+                    libraryDirs = [];
+                    siblingDirs = newNode.directory.children;
+                }
+                let fileIndex = siblingDirs.findIndex(
                     (o) => {return !("children" in o)}
                 );
                 if (fileIndex === -1) {
-                    fileIndex = newFiles.length();
+                    fileIndex = newFiles.length;
                 }
-                let subarray = newFiles.slice(0, fileIndex);
+                let subarray = siblingDirs.slice(0, fileIndex);
                 subarray = subarray.sort((o1, o2) => {
                     if (o1.name < o2.name)
                         return -1;
@@ -197,23 +300,37 @@ class App extends React.Component {
                     else
                         return 0;
                 });
-                let rest = newFiles.slice(fileIndex);
+                let rest = siblingDirs.slice(fileIndex);
                 subarray = subarray.concat(rest);
+                if (!('directory' in node)) {
+                    // TODO: actually check the number of lib dirs
+                    newFiles = libraryDirs.concat(subarray);
+                } else {
+                    newNode.directory.children = libraryDirs.concat(subarray);
+                }
                 this.setState({
-                    files: libraryDirs.concat(subarray),
+                    files: newFiles,
                     namingNewFile: false,
                     newFileName: '',
                 });
             } else {
                 // sort the files
                 // TODO: actually check the number of lib dirs
-                let libraryDirs = newFiles.slice(0, 1);
-                newFiles = newFiles.slice(1);
+                let libraryDirs;
+                let siblingDirs;
+                if (!('directory' in node)) {
+                    // TODO: actually check the number of lib dirs
+                    libraryDirs = newFiles.slice(0, 1);
+                    siblingDirs = newFiles.slice(1);
+                } else {
+                    libraryDirs = [];
+                    siblingDirs = newNode.directory.children;
+                }
                 // TODO: handle non top-level dirs
-                let fileIndex = newFiles.findIndex(
+                let fileIndex = siblingDirs.findIndex(
                     (o) => {return !("children" in o)}
                 );
-                let subarray = newFiles.slice(fileIndex);
+                let subarray = siblingDirs.slice(fileIndex);
                 subarray = subarray.sort((o1, o2) => {
                     if (o1.name < o2.name)
                         return -1;
@@ -222,17 +339,32 @@ class App extends React.Component {
                     else
                         return 0;
                 });
-                let rest = newFiles.slice(0, fileIndex);
+                let rest = siblingDirs.slice(0, fileIndex);
                 subarray = rest.concat(subarray);
+                if (!('directory' in node)) {
+                    // TODO: actually check the number of lib dirs
+                    newFiles = libraryDirs.concat(subarray);
+                } else {
+                    newNode.directory.children = libraryDirs.concat(subarray);
+                }
                 this.setState({
-                    files: libraryDirs.concat(subarray),
+                    files: newFiles,
                     namingNewFile: false,
                     newFileName: '',
                 });
             }
         })
         .catch(error => {
-            _.remove(newFiles, (o) => {return _.isEqual(o, node)});
+            if (sibling_list.length === 1) {
+                newNode.directory.empty = true;
+                newNode.directory.children = [{
+                    name: '(empty)',
+                    empty: true,
+                    readOnly: true,
+                }];
+            } else {
+                _.remove(sibling_list, (o) => {return _.isEqual(o, node)});
+            }
             this.setState({
                 files: newFiles,
                 namingNewFile: false,
@@ -252,7 +384,8 @@ class App extends React.Component {
     }
 
     handleToggle(node, toggled) {
-        if (node.untitled || node.empty) {
+        if (node.untitled || (!('children' in node) && node.empty)) {
+            console.log('returning');
             return;
         }
         let newFiles = _.cloneDeep(this.state.files);
@@ -302,17 +435,77 @@ class App extends React.Component {
         });
     }
 
-    handleNewFile() {
-        let newNode = {
-            name: undefined,
-            untitled: true,
-        };
-        let newFiles = _.cloneDeep(this.state.files);
-        newFiles.push(newNode);
-        this.setState({
-            files: newFiles,
-            namingNewFile: true,
-        });
+    handleNewFile(e, data, target) {
+        if (data === undefined) {
+            // top level file
+            let newNode = {
+                name: undefined,
+                untitled: true,
+            };
+            let newFiles = _.cloneDeep(this.state.files);
+            newFiles.push(newNode);
+            this.setState({
+                files: newFiles,
+                namingNewFile: true,
+            });
+        } else {
+            e.stopPropagation();
+            let pathList = target.children[0].id.split('/');
+            let newFiles = _.cloneDeep(this.state.files);
+            let newCurNode = this.getNodeFromPathList(newFiles, pathList);
+
+            // this.ensureDirectoryTree(newCurNode);
+            let newNode;
+            if (data.action === 'new-file') {
+                newNode = {
+                    name: undefined,
+                    untitled: true,
+                    directory: newCurNode,
+                };
+            } else {
+                newNode = {
+                    name: undefined,
+                    untitled: true,
+                    directory: newCurNode,
+                    children: [{
+                        name: '(empty)',
+                        empty: true,
+                        readOnly: true,
+                    }],
+                };
+
+            }
+            if (newCurNode.empty) {
+                newCurNode.empty = false;
+                newCurNode.children = [newNode];
+            } else {
+                if (data.action === 'new-file') {
+                    newCurNode.children.push(newNode);
+                } else {
+                    let fileIndex = newCurNode.children.findIndex(
+                        (o) => {return !("children" in o)}
+                    );
+                    if (fileIndex === -1) {
+                        fileIndex = newCurNode.children.length;
+                    }
+                    newCurNode.children =
+                        newCurNode.children.slice(0, fileIndex)
+                            .concat(newNode)
+                            .concat(newCurNode.children.slice(fileIndex));
+                }
+            }
+            let animating;
+            if (!newCurNode.toggled) {
+                newCurNode.toggled = true;
+                animating = true;
+            }
+            newCurNode.loading = false;
+            this.setState({
+                files: newFiles,
+                animating: animating,
+                namingNewFile: true,
+            });
+        }
         // let curNode = this.state.cursor;
         // let pathList = utils.getNodePathList(curNode);
 
@@ -403,7 +596,10 @@ class App extends React.Component {
 
     handleModalClick(event) {
         if ('closeonclick' in event.target.attributes) {
-            this.setState({showLoginModal: false});
+            this.setState({
+                showLoginModal: false,
+                movingFile: false,
+            });
         }
     }
 
@@ -508,6 +704,7 @@ class App extends React.Component {
                 });
                 newNode['children'] = files;
             } else {
+                newNode['empty'] = true;
                 newNode['children'] = [{
                     name: '(empty)',
                     empty: true,
@@ -748,10 +945,9 @@ class App extends React.Component {
                 </div>
             )
         }
-        let modal;
+        let loginModal;
         if (this.state.showLoginModal) {
-            // add redirect or something
-		    modal = (
+		    loginModal = (
                 <div
                     className="modal-background"
                     closeonclick="true"
@@ -768,8 +964,38 @@ class App extends React.Component {
                         onAuth={(response) => {
                             this.setState({showLoginModal: false});
                             this.props.onAuth(response);
+                            this.restoreSession(this.props.access);
                         }}
                     />
+                </div>
+            );
+        }
+        let fileModal;
+        if (this.state.movingFile) {
+            let newFiles = _.cloneDeep(this.state.files);
+            newFiles.forEach((node) => {
+                if (!node.library && 'children' in node) {
+                    this.ensureDirectoryTree(node); 
+                }
+            });
+		    fileModal = (
+                <div
+                    className="modal-background"
+                    closeonclick="true"
+                    onClick={this.handleModalClick}
+                >
+                    <img
+                        className="close-icon"
+                        src={closeIcon}
+                        alt="close"
+                        closeonclick="true"
+                    />
+                    <div className="directory-select">
+                        <ul>
+                        <li>root</li>
+                        {this.listDirs(this.state.files)}
+                        </ul>
+                    </div>
                 </div>
             );
         }
@@ -811,6 +1037,7 @@ class App extends React.Component {
                         saveMessage={this.state.saveMessage}
                         newFileName={this.state.newFileName}
                         namingNewFile={this.state.namingNewFile}
+                        animating={this.state.animating}
 
                         onSave={this.handleSave}
                         onSceneChange={this.handleSceneChange}
@@ -831,9 +1058,11 @@ class App extends React.Component {
                         onFileMove={this.handleFileMove}
                         onFileDelete={this.handleFileDelete}
                         onSetAutosaveTimeout={this.handleSetAutosaveTimeout}
+                        onAnimationComplete={this.handleAnimationComplete}
                     />
                 </div>
-                {modal}
+                {loginModal}
+                {fileModal}
             </div>
         );
     }
