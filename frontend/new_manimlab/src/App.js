@@ -37,8 +37,6 @@ class App extends React.Component {
             showLoginModal: false,
             renderTimer: -1,
             saveMessage: "",
-            newFileName: "",
-            namingNewFile: false,
             autosaveTimer: -1,
             movingFile: false,
             animating: false,
@@ -58,9 +56,8 @@ class App extends React.Component {
         this.handleModalClick = this.handleModalClick.bind(this);
         this.handleNewFile = this.handleNewFile.bind(this);
         this.handleNewDirectory = this.handleNewDirectory.bind(this);
-        this.handleDirectoryName = this.handleDirectoryName.bind(this);
+        this.handleNewFileName = this.handleNewFileName.bind(this);
         this.handleToggle = this.handleToggle.bind(this);
-        this.handleNewFileNameChange=this.handleNewFileNameChange.bind(this);
         this.handleFileRename=this.handleFileRename.bind(this);
         this.handleFileMove=this.handleFileMove.bind(this);
         this.handleFileDelete=this.handleFileDelete.bind(this);
@@ -170,7 +167,7 @@ class App extends React.Component {
             params: {
                 project: this.state.project,
                 name: filePath,
-                directory: 'children' in delNode,
+                directory: 'children' in delNode ? 1 : 0,
             },
             headers: headers,
         })
@@ -208,11 +205,7 @@ class App extends React.Component {
         });
     }
 
-    handleNewFileNameChange(event) {
-        this.setState({newFileName: event.target.value});
-    }
-
-    handleDirectoryName(node) {
+    handleNewFileName(node, name) {
         // TODO: will fail for non top-level dirs
         let newFiles = _.cloneDeep(this.state.files);
         let newNode = this.getNodeFromPathList(
@@ -230,11 +223,11 @@ class App extends React.Component {
         let valid = true;
         let errorMsg = "";
         if (_.find(sibling_list,
-            (o) => {return o.name === this.state.newFileName})) {
+            (o) => {return o.name === name})) {
             valid = false;
             errorMsg = "filename is taken";
         }
-        if (this.state.newFileName.indexOf('/') !== -1) {
+        if (name.indexOf('/') !== -1) {
             valid = false;
             errorMsg = "invalid filename";
         }
@@ -243,8 +236,6 @@ class App extends React.Component {
             _.remove(sibling_list, (o) => {return _.isEqual(o, node)});
             this.setState({
                 files: newFiles,
-                namingNewFile: false,
-                newFileName: '',
             });
             return;
         }
@@ -256,7 +247,7 @@ class App extends React.Component {
             headers = {};
         }
         let pathList = utils.getNodePathList(node);
-        pathList[pathList.length - 1] = this.state.newFileName;
+        pathList[pathList.length - 1] = name;
         axios.post(
             consts.SAVE_URL,
             {
@@ -269,7 +260,7 @@ class App extends React.Component {
         )
         .then(response => {
             newNode['untitled'] = false;
-            newNode['name'] = this.state.newFileName;
+            newNode['name'] = name;
             newNode['project'] = this.state.project;
 
             if ('children' in node) {
@@ -310,8 +301,6 @@ class App extends React.Component {
                 }
                 this.setState({
                     files: newFiles,
-                    namingNewFile: false,
-                    newFileName: '',
                 });
             } else {
                 // sort the files
@@ -349,8 +338,6 @@ class App extends React.Component {
                 }
                 this.setState({
                     files: newFiles,
-                    namingNewFile: false,
-                    newFileName: '',
                 });
             }
         })
@@ -367,8 +354,6 @@ class App extends React.Component {
             }
             this.setState({
                 files: newFiles,
-                namingNewFile: false,
-                newFileName: '',
             });
             if (error.response !== undefined &&
                 error.response.statusText === 'Unauthorized') {
@@ -431,7 +416,6 @@ class App extends React.Component {
         }
         this.setState({
             files: newFiles,
-            namingNewFile: true,
         });
     }
 
@@ -446,7 +430,6 @@ class App extends React.Component {
             newFiles.push(newNode);
             this.setState({
                 files: newFiles,
-                namingNewFile: true,
             });
         } else {
             e.stopPropagation();
@@ -503,7 +486,6 @@ class App extends React.Component {
             this.setState({
                 files: newFiles,
                 animating: animating,
-                namingNewFile: true,
             });
         }
         // let curNode = this.state.cursor;
@@ -542,7 +524,7 @@ class App extends React.Component {
             consts.SESSION_URL,
             {
                 // TODO: this should be a path list
-                name: this.state.newFileName,
+                name: this.state.filename,
                 project: this.state.project,
                 directory: true,
             },
@@ -1035,8 +1017,6 @@ class App extends React.Component {
                         inputFilename={this.state.inputFilename}
                         readOnly={this.state.displayingLibraryCode || this.props.access.length === 0}
                         saveMessage={this.state.saveMessage}
-                        newFileName={this.state.newFileName}
-                        namingNewFile={this.state.namingNewFile}
                         animating={this.state.animating}
 
                         onSave={this.handleSave}
@@ -1051,9 +1031,7 @@ class App extends React.Component {
                         onNewFile={this.handleNewFile}
                         onNewDirectory={this.handleNewDirectory}
                         onToggle={this.handleToggle}
-                        onDirectoryName={this.handleDirectoryName}
-                        onFileName={this.handleDirectoryName}
-                        onNewFileNameChange={this.handleNewFileNameChange}
+                        onNewFileName={this.handleNewFileName}
                         onFileRename={this.handleFileRename}
                         onFileMove={this.handleFileMove}
                         onFileDelete={this.handleFileDelete}

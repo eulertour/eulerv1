@@ -608,7 +608,7 @@ class ModuleDelete(generics.DestroyAPIView):
         )
     
     def delete(self, request, *args, **kwargs):
-        if request.query_params['directory']:
+        if request.query_params['directory'] == '1':
             directory_path = get_valid_media_path(
                 request.query_params['project'],
                 request.user.username,

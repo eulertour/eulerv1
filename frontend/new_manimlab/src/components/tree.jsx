@@ -114,9 +114,8 @@ class TreeExample extends React.Component {
         super(props);
         this.state = {
             animating: false,
+            newFileName: "",
         };
-        this.handleToggle = this.handleToggle.bind(this);
-        this.handleNameChange = this.handleNameChange.bind(this);
     }
 
     componentDidUpdate() {
@@ -126,25 +125,8 @@ class TreeExample extends React.Component {
     }
 
     focusInput() {
-        if (this.props.namingNewFile) {
+        if (this.nameInput) {
             this.nameInput.focus();
-        }
-    }
-
-    handleNameChange(event) {
-        console.log(event); 
-    } 
-
-    handleToggle(node, toggled){
-        console.log('clicked');
-        if (this.props.cursor !== undefined) {
-            let cur_active_node = this.props.cursor;
-            cur_active_node.active = false;
-        }
-        if ('children' in node && toggled && node.loading) {
-            this.props.onExpandDirectory(node);
-        } else {
-            this.props.onSelectNode(node, toggled);
         }
     }
 
@@ -155,7 +137,6 @@ class TreeExample extends React.Component {
             enter: {
                 animation: 'slideDown',
                 duration: 300,
-                // begin: () => {this.setState({animating: true})},
                 complete: () => {
                     this.props.onAnimationComplete();
                     this.focusInput();
@@ -173,18 +154,15 @@ class TreeExample extends React.Component {
                 style = _.cloneDeep(style);
             }
             if (node.untitled) {
-                let callback;
-                if ('children' in node) {
-                    callback = () => {this.props.onDirectoryName(node)};
-                } else {
-                    callback = () => {this.props.onFileName(node)};
-                }
                 return (
                     <input
                         ref={(input) => {this.nameInput = input}}
-                        value={this.props.newFileName}
-                        onChange={this.props.onNewFileNameChange}
-                        onBlur={callback}
+                        value={this.state.newFileName}
+                        onChange={(event) => {this.setState({newFileName: event.target.value})}}
+                        onBlur={() => {
+                            this.props.onNewFileName(node, this.state.newFileName.slice());
+                            this.setState({newFileName: ""});
+                        }}
                     />
                 );
             } else if (node.active) {
@@ -278,16 +256,6 @@ class TreeExample extends React.Component {
                         </MenuItem>
                         <MenuItem divider />
                         <MenuItem
-                            data={{action: 'move'}}
-                            onClick={this.props.onFileMove}>
-                            <FontAwesomeIcon
-                                className="menu-icon"
-                                icon={["fas", "arrow-right"]}
-                            />
-                            Move
-                        </MenuItem>
-                        <MenuItem divider />
-                        <MenuItem
                             data={{action: 'delete'}}
                             onClick={this.props.onFileDelete}>
                             <FontAwesomeIcon
@@ -300,64 +268,62 @@ class TreeExample extends React.Component {
                 </div>
             );
         }
-        if (!this.props.collapsed) {
-            return (
-                <div className="tree-part">
-                    <div className="tree-banner">
-                        <div id="tree-label">Files</div>
-                        <div className="tree-buttons">
-                            <div
-                                className="new-file-button"
-                                onClick={this.props.onNewFile}
-                            >
-                                <img
-                                    className="file-banner-button"
-                                    src={newFileIcon}
-                                    alt="new file"
-                                />
-                            </div>
-                            <div
-                                className="new-dir-button"
-                                onClick={this.props.onNewDirectory}
-                            >
-                                <img
-                                    className="folder-banner-button"
-                                    src={newDirIcon}
-                                    alt="new directory"
-                                />
-                            </div>
-                            <div
-                                className="collapse-button"
-                                onClick={this.props.onTreeToggle}
-                            >
-                                <img
-                                    className="collapse-icon"
-                                    src={collapseTreeIcon}
-                                    alt="collapse tree"
-                                />
-                            </div>
+        return (
+            <div className="tree-part">
+                <div className="tree-banner">
+                    <div id="tree-label">Files</div>
+                    <div className="tree-buttons">
+                        <div
+                            className="new-file-button"
+                            onClick={this.props.onNewFile}
+                        >
+                            <img
+                                className="file-banner-button"
+                                src={newFileIcon}
+                                alt="new file"
+                            />
+                        </div>
+                        <div
+                            className="new-dir-button"
+                            onClick={this.props.onNewDirectory}
+                        >
+                            <img
+                                className="folder-banner-button"
+                                src={newDirIcon}
+                                alt="new directory"
+                            />
+                        </div>
+                        <div
+                            className="collapse-button"
+                            onClick={this.props.onTreeToggle}
+                        >
+                            <img
+                                className="collapse-icon"
+                                src={collapseTreeIcon}
+                                alt="collapse tree"
+                            />
                         </div>
                     </div>
-                    <div className="treebeard-container">
-                        <PerfectScrollbar option={{wheelPropagation: false}} >
-                            <Treebeard
-                                data={this.props.files}
-                                    onToggle={(node, toggled) => {
-                                        this.setState({animating: true});
-                                        this.props.onToggle(node, toggled);
-                                    }
-                                }
-                                style={style}
-                                decorators={decorators}
-                                animations={animations}
-                            />
-                        </PerfectScrollbar>
-                    </div>
                 </div>
-            );
-        } else {
-            return null;
-        }
+                <div className="treebeard-container">
+                    <PerfectScrollbar option={{wheelPropagation: false}} >
+                        <Treebeard
+                            data={this.props.files}
+                                onToggle={(node, toggled) => {
+                                    if ('toggled' in node && node.toggled !== toggled) {
+                                        this.setState({animating: true});
+                                    }
+                                    this.props.onToggle(node, toggled);
+                                }
+                            }
+                            style={style}
+                            decorators={decorators}
+                            animations={animations}
+                        />
+                    </PerfectScrollbar>
+                </div>
+            </div>
+        );
     }
 }
 
