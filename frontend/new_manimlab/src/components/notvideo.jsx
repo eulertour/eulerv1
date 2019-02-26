@@ -40,12 +40,10 @@ class NotVideo extends Component {
                 this.props.scene,
             )
             video_content = (
-                <Player
-                    playsInline
-                    src={url}
-                    fluid={false}
-                    height={"100%"}
-                />
+                <Player playsInline
+                        src={url}
+                        fluid={false}
+                        height={"100%"} />
             );
         }
         let video = (

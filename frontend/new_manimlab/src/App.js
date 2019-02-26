@@ -23,23 +23,26 @@ class App extends React.Component {
     constructor(props, context) {
         super(props, context);
         this.state = {
-            error: consts.DEFAULT_LOGS,
-            returncode: -1,
-            files: [],
-            filename: "",
-            code: "",
-            scene: "",
-            selectedScene: "",
-            selectedFile: "",
-            inputFilename: "",
-            cursor: {},
-            project: "",
-            showLoginModal: false,
-            renderTimer: -1,
-            saveMessage: "",
+            editorAnimating: false,
+            editorCode: "",
+            editorCursor: {},
+            editorFilename: "",
+            editorFilenameInput: "",
+            editorFiles: [],
+            editorReadOnly: true,
+            editorSaveMessage: "",
+            editorSceneInput: "",
+
+            videoError: consts.DEFAULT_LOGS,
+            videoFile: "",
+            videoReturncode: -1,
+            videoScene: "",
+
             autosaveTimer: -1,
-            movingFile: false,
-            animating: false,
+            project: "",
+            renderTimer: -1,
+            showFileMoveModal: false,
+            showLoginModal: false,
         }
         this.logOut = this.logOut.bind(this);
         this.restoreSession = this.restoreSession.bind(this);
@@ -65,7 +68,7 @@ class App extends React.Component {
     }
 
     handleAnimationComplete() {
-        this.setState({animating: false});
+        this.setState({editorAnimating: false});
     }
 
     ensureDirectoryTree(node) {
@@ -131,7 +134,7 @@ class App extends React.Component {
         );
         this.setState({
             autosaveTimer: autosaveTimer,
-            saveMessage: "",
+            editorSaveMessage: "",
         });
     }
 
@@ -143,7 +146,7 @@ class App extends React.Component {
     handleFileMove(e, data, target) {
         e.stopPropagation();
         console.log(data.action + ' ' + target.children[0].id);
-        this.setState({movingFile: true});
+        this.setState({showFileMoveModal: true});
     }
 
     handleFileDelete(e, data, target) {
@@ -152,7 +155,7 @@ class App extends React.Component {
 
         let filePath = target.children[0].id;
         let delNode = this.getNodeFromPathList(
-            this.state.files,
+            this.state.editorFiles,
             filePath.split('/'),
         );
         let headers;
@@ -170,7 +173,7 @@ class App extends React.Component {
             headers: headers,
         })
         .then(response => {
-            let newFiles = _.cloneDeep(this.state.files);
+            let newFiles = _.cloneDeep(this.state.editorFiles);
             let delNode = this.getNodeFromPathList(
                 newFiles,
                 filePath.split('/'),
@@ -191,9 +194,9 @@ class App extends React.Component {
             }
             clearTimeout(this.state.autosaveTimer);
             this.setState({
-                files: newFiles,
-                filename: "",
-                code: "",
+                editorFiles: newFiles,
+                editorFilename: "",
+                editorCode: "",
             });
         })
         .catch(error => {
@@ -205,7 +208,7 @@ class App extends React.Component {
 
     handleNewFileName(node, name) {
         // TODO: will fail for non top-level dirs
-        let newFiles = _.cloneDeep(this.state.files);
+        let newFiles = _.cloneDeep(this.state.editorFiles);
         let newNode = this.getNodeFromPathList(
             newFiles,
             utils.getNodePathList(node)
@@ -233,7 +236,7 @@ class App extends React.Component {
             alert(errorMsg);
             _.remove(sibling_list, (o) => {return _.isEqual(o, node)});
             this.setState({
-                files: newFiles,
+                editorFiles: newFiles,
             });
             return;
         }
@@ -298,7 +301,7 @@ class App extends React.Component {
                     newNode.directory.children = libraryDirs.concat(subarray);
                 }
                 this.setState({
-                    files: newFiles,
+                    editorFiles: newFiles,
                 });
             } else {
                 // sort the files
@@ -335,7 +338,7 @@ class App extends React.Component {
                     newNode.directory.children = libraryDirs.concat(subarray);
                 }
                 this.setState({
-                    files: newFiles,
+                    editorFiles: newFiles,
                 });
             }
         })
@@ -351,7 +354,7 @@ class App extends React.Component {
                 _.remove(sibling_list, (o) => {return _.isEqual(o, node)});
             }
             this.setState({
-                files: newFiles,
+                editorFiles: newFiles,
             });
             if (error.response !== undefined &&
                 error.response.statusText === 'Unauthorized') {
@@ -371,16 +374,17 @@ class App extends React.Component {
             console.log('returning');
             return;
         }
-        let newFiles = _.cloneDeep(this.state.files);
+        clearInterval(this.state.autosaveTimer);
+        let newFiles = _.cloneDeep(this.state.editorFiles);
         let newNode = this.getNodeFromPathList(newFiles, utils.getNodePathList(node));
-        let newCursor = this.getNodeFromPathList(newFiles, utils.getNodePathList(this.state.cursor));
+        let newCursor = this.getNodeFromPathList(newFiles, utils.getNodePathList(this.state.editorCursor));
 
         if (!("children" in node)) {
             newNode.active = true;
-            if (!_.isEmpty(this.state.cursor)) {
+            if (!_.isEmpty(this.state.editorCursor)) {
                 newCursor.active = false;
             }
-            this.setState({cursor: newNode});
+            this.setState({editorCursor: newNode});
         }
 
         if ('children' in node) {
@@ -392,7 +396,7 @@ class App extends React.Component {
             this.fetchFileContents(newNode);
         }
 
-        this.setState({files: newFiles});
+        this.setState({editorFiles: newFiles});
     }
 
     handleNewFile(e, data, target) {
@@ -403,10 +407,10 @@ class App extends React.Component {
                     name: undefined,
                     untitled: true,
                 };
-                let newFiles = _.cloneDeep(this.state.files);
+                let newFiles = _.cloneDeep(this.state.editorFiles);
                 newFiles.push(newNode);
                 this.setState({
-                    files: newFiles,
+                    editorFiles: newFiles,
                 });
             } else if (e === 'new-directory') {
                 let newNode = {
@@ -419,15 +423,15 @@ class App extends React.Component {
                         readOnly: true,
                     }],
                 };
-                let newFiles = _.cloneDeep(this.state.files);
-                let fileIndex = _.findIndex(this.state.files, (o) => {return !("children" in o)});
+                let newFiles = _.cloneDeep(this.state.editorFiles);
+                let fileIndex = _.findIndex(this.state.editorFiles, (o) => {return !("children" in o)});
                 if (fileIndex === -1) {
                     newFiles.push(newNode);
                 } else {
                     newFiles.splice(fileIndex, 0, newNode);
                 }
                 this.setState({
-                    files: newFiles,
+                    editorFiles: newFiles,
                 });
             } else {
                 console.log('unknown action');
@@ -435,7 +439,7 @@ class App extends React.Component {
         } else {
             e.stopPropagation();
             let pathList = target.children[0].id.split('/');
-            let newFiles = _.cloneDeep(this.state.files);
+            let newFiles = _.cloneDeep(this.state.editorFiles);
             let newCurNode = this.getNodeFromPathList(newFiles, pathList);
 
             // this.ensureDirectoryTree(newCurNode);
@@ -487,8 +491,8 @@ class App extends React.Component {
             }
             newCurNode.loading = false;
             this.setState({
-                files: newFiles,
-                animating: animating,
+                editorFiles: newFiles,
+                editorAnimating: animating,
             });
         }
     }
@@ -502,7 +506,7 @@ class App extends React.Component {
             consts.SESSION_URL,
             {
                 // TODO: this should be a path list
-                name: this.state.filename,
+                name: this.state.editorFilename,
                 project: this.state.project,
                 directory: true,
             },
@@ -523,12 +527,12 @@ class App extends React.Component {
                 return obj;
             });
             this.setState({
-                filename: response.data.filename || this.state.filename,
-                inputFilename: response.data.filename || this.state.inputFilename,
-                scene: response.data.scene || this.state.scene,
-                selectedScene: response.data.scene || this.state.scene,
-                files: files || this.state.files,
-                code: response.data.code || this.state.code,
+                editorFilename: response.data.filename || this.state.editorFilename,
+                editorFilenameInput: response.data.filename || this.state.editorFilenameInput,
+                editorScene: response.data.scene || this.state.videoScene,
+                videoScene: response.data.scene || this.state.videoScene,
+                editorFiles: files || this.state.editorFiles,
+                editorCode: response.data.code || this.state.editorCode,
                 project: response.data.project || this.state.project,
             });
             if ('username' in response.data) {
@@ -558,7 +562,7 @@ class App extends React.Component {
         if ('closeonclick' in event.target.attributes) {
             this.setState({
                 showLoginModal: false,
-                movingFile: false,
+                showFileMoveModal: false,
             });
         }
     }
@@ -586,8 +590,8 @@ class App extends React.Component {
                 displayingLibraryCode = true;
             }
             this.setState({
-                filename: utils.getNodePathList(node).join('/'),
-                code: response.data['content'],
+                editorFilename: utils.getNodePathList(node).join('/'),
+                editorCode: response.data['content'],
                 displayingLibraryCode: displayingLibraryCode,
             })
         })
@@ -645,7 +649,7 @@ class App extends React.Component {
             {headers: headers},
         )
         .then(response => {
-            let newFiles = _.cloneDeep(this.state.files);
+            let newFiles = _.cloneDeep(this.state.editorFiles);
             let newNode = this.getNodeFromPathList(newFiles, pathList);
             if (response.data.length !== 0) {
                 let files = response.data.map(obj => {
@@ -672,7 +676,7 @@ class App extends React.Component {
                 }];
             }
             newNode['loading'] = false;
-            this.setState({files:newFiles});
+            this.setState({editorFiles: newFiles});
         })
         .catch(error => {
             console.log(error);
@@ -681,19 +685,19 @@ class App extends React.Component {
     }
 
     handleCodeChange(newValue) {
-        this.setState({code: newValue});
+        this.setState({editorCode: newValue});
     }
 
     handleSceneChange(event) {
-        this.setState({scene: event.target.value});
+        this.setState({videoScene: event.target.value});
     }
 
     handleFilenameChange(event) {
-        this.setState({filename: event.target.value});
+        this.setState({editorFilename: event.target.value});
     }
 
     handleInputFilenameChange(event) {
-        this.setState({inputFilename: event.target.value});
+        this.setState({editorFilenameInput: event.target.value});
     }
 
     logOut() {
@@ -701,22 +705,22 @@ class App extends React.Component {
         this.props.onLogOut();
         this.restoreSession('');
         this.setState({
-            selectedScene: consts.DEFAULT_SELECTED_SCENE,
-            returncode: -1,
-            error: consts.DEFAULT_LOGS,
-            saveMessage: "",
+            videoScene: consts.DEFAULT_SELECTED_SCENE,
+            videoReturncode: -1,
+            videoError: consts.DEFAULT_LOGS,
+            editorSaveMessage: "",
         });
     }
 
     handleRenderFinished(responseData) {
         if (responseData.result['returncode'] === 0) {
             // a hack to get the video component to reload
-            this.setState({selectedScene: ''});
+            this.setState({videoScene: ''});
             this.setState({
-                error: responseData.result['stderr'],
-                returncode: 0,
-                selectedScene: responseData['scene'],
-                selectedFile: responseData['filename'],
+                videoError: responseData.result['stderr'],
+                videoReturncode: 0,
+                videoScene: responseData['scene'],
+                videoFile: responseData['filename'],
             });
         } else {
             let error;
@@ -728,9 +732,9 @@ class App extends React.Component {
                 error = responseData.result['error'];
             }
             this.setState({
-                error: error,
-                returncode: responseData.result['returncode'] || -1,
-                selectedScene: responseData['scene'] || '',
+                videoError: error,
+                videoReturncode: responseData.result['returncode'] || -1,
+                videoScene: responseData['scene'] || '',
             });
         }
     }
@@ -769,8 +773,8 @@ class App extends React.Component {
             url: consts.RENDER_URL,
             headers: headers,
             data: {
-                filename: this.state.inputFilename,
-                scene: this.state.scene,
+                filename: this.state.editorFilenameInput,
+                scene: this.state.editorSceneInput,
                 project: this.state.project,
             }
         })
@@ -813,18 +817,18 @@ class App extends React.Component {
             consts.SAVE_URL,
             {
                 // TODO: this should be a path list
-                name: this.state.filename,
+                name: this.state.editorFilename,
                 project: this.state.project,
-                scene: this.state.scene,
-                code: this.state.code,
+                scene: this.state.editorSceneInput,
+                code: this.state.editorCode,
                 directory: false,
             },
             {headers: headers},
         )
         .then(response => {
             this.setState({
-                filename: response.data.filename,
-                saveMessage: "saved",
+                editorFilename: response.data.filename,
+                editorSaveMessage: "saved",
             })
             // TODO: factor from here and RenderResponse
             if ('authorization' in response.headers) {
@@ -840,7 +844,7 @@ class App extends React.Component {
                 error.response.status === 400) {
                 console.log(error.response.data.error);
                 // they probably gave an illegal filename
-                this.setState({ });
+                this.setState({});
             }
         });
     }
@@ -918,8 +922,8 @@ class App extends React.Component {
             );
         }
         let fileModal;
-        if (this.state.movingFile) {
-            let newFiles = _.cloneDeep(this.state.files);
+        if (this.state.showFileMoveModal) {
+            let newFiles = _.cloneDeep(this.state.editorFiles);
             newFiles.forEach((node) => {
                 if (!node.library && 'children' in node) {
                     this.ensureDirectoryTree(node); 
@@ -940,7 +944,7 @@ class App extends React.Component {
                     <div className="directory-select">
                         <ul>
                         <li>root</li>
-                        {this.listDirs(this.state.files)}
+                        {this.listDirs(this.state.editorFiles)}
                         </ul>
                     </div>
                 </div>
@@ -966,23 +970,23 @@ class App extends React.Component {
                 </div>
                 <div className="app-container">
                     <NotVideo
-                        error={this.state.error}   
-                        scene={this.state.selectedScene}
-                        returncode={this.state.returncode}
-                        username={this.props.username}
+                        error={this.state.videoError}
+                        filename={this.state.videoFile}
                         project={this.state.project}
-                        filename={this.state.selectedFile}
+                        returncode={this.state.videoReturncode}
+                        scene={this.state.videoScene}
+                        username={this.props.username}
                     />
                     <Editor
-                        code={this.state.code}
-                        filename={this.getPathBaseName(this.state.filename)}
-                        scene={this.state.scene}
-                        files={this.state.files}
-                        cursor={this.state.cursor}
-                        inputFilename={this.state.inputFilename}
+                        animating={this.state.editorAnimating}
+                        code={this.state.editorCode}
+                        cursor={this.state.editorCursor}
+                        filename={this.getPathBaseName(this.state.editorFilename)}
+                        filenameInput={this.state.editorFilenameInput}
+                        files={this.state.editorFiles}
                         readOnly={this.state.displayingLibraryCode || this.props.access.length === 0}
-                        saveMessage={this.state.saveMessage}
-                        animating={this.state.animating}
+                        saveMessage={this.state.editorSaveMessage}
+                        sceneInput={this.state.editorSceneInput}
 
                         onSave={this.handleSave}
                         onSceneChange={this.handleSceneChange}

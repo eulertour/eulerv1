@@ -23,8 +23,8 @@ class Editor extends Component {
 
     constructor(props, context) {
         super(props, context);
-        this.getFileBanner = this.getFileBanner.bind(this);
-        this.handleTreeToggle = this.handleTreeToggle.bind(this);
+        this.getFileBanner=this.getFileBanner.bind(this);
+        this.handleTreeToggle=this.handleTreeToggle.bind(this);
     }
 
     componentDidUpdate() {
