@@ -275,7 +275,7 @@ class TreeExample extends React.Component {
                     <div className="tree-buttons">
                         <div
                             className="new-file-button"
-                            onClick={this.props.onNewFile}
+                            onClick={() => this.props.onNewFile('new-file')}
                         >
                             <img
                                 className="file-banner-button"
@@ -285,7 +285,7 @@ class TreeExample extends React.Component {
                         </div>
                         <div
                             className="new-dir-button"
-                            onClick={this.props.onNewDirectory}
+                            onClick={() => this.props.onNewFile('new-directory')}
                         >
                             <img
                                 className="folder-banner-button"
@@ -309,13 +309,12 @@ class TreeExample extends React.Component {
                     <PerfectScrollbar option={{wheelPropagation: false}} >
                         <Treebeard
                             data={this.props.files}
-                                onToggle={(node, toggled) => {
-                                    if ('toggled' in node && node.toggled !== toggled) {
-                                        this.setState({animating: true});
-                                    }
-                                    this.props.onToggle(node, toggled);
+                            onToggle={(node, toggled) => {
+                                if ('toggled' in node && node.toggled !== toggled) {
+                                    this.setState({animating: true});
                                 }
-                            }
+                                this.props.onToggle(node, toggled);
+                            }}
                             style={style}
                             decorators={decorators}
                             animations={animations}

@@ -43,7 +43,6 @@ class App extends React.Component {
         }
         this.logOut = this.logOut.bind(this);
         this.restoreSession = this.restoreSession.bind(this);
-        this.handleRename = this.handleRename.bind(this);
         this.handleRenderFinished = this.handleRenderFinished.bind(this);
         this.handleRender = this.handleRender.bind(this);
         this.handleSave = this.handleSave.bind(this);
@@ -55,7 +54,6 @@ class App extends React.Component {
         this.fetchFileContents = this.fetchFileContents.bind(this);
         this.handleModalClick = this.handleModalClick.bind(this);
         this.handleNewFile = this.handleNewFile.bind(this);
-        this.handleNewDirectory = this.handleNewDirectory.bind(this);
         this.handleNewFileName = this.handleNewFileName.bind(this);
         this.handleToggle = this.handleToggle.bind(this);
         this.handleFileRename=this.handleFileRename.bind(this);
@@ -397,40 +395,43 @@ class App extends React.Component {
         this.setState({files: newFiles});
     }
 
-    handleNewDirectory() {
-        let newNode = {
-            name: undefined,
-            untitled: true,
-            children: [{
-                name: '(empty)',
-                empty: true,
-                readOnly: true,
-            }],
-        };
-        let newFiles = _.cloneDeep(this.state.files);
-        let fileIndex = _.findIndex(this.state.files, (o) => {return !("children" in o)});
-        if (fileIndex === -1) {
-            newFiles.push(newNode);
-        } else {
-            newFiles.splice(fileIndex, 0, newNode);
-        }
-        this.setState({
-            files: newFiles,
-        });
-    }
-
     handleNewFile(e, data, target) {
         if (data === undefined) {
             // top level file
-            let newNode = {
-                name: undefined,
-                untitled: true,
-            };
-            let newFiles = _.cloneDeep(this.state.files);
-            newFiles.push(newNode);
-            this.setState({
-                files: newFiles,
-            });
+            if (e === 'new-file') {
+                let newNode = {
+                    name: undefined,
+                    untitled: true,
+                };
+                let newFiles = _.cloneDeep(this.state.files);
+                newFiles.push(newNode);
+                this.setState({
+                    files: newFiles,
+                });
+            } else if (e === 'new-directory') {
+                let newNode = {
+                    name: undefined,
+                    untitled: true,
+                    empty: true,
+                    children: [{
+                        name: '(empty)',
+                        empty: true,
+                        readOnly: true,
+                    }],
+                };
+                let newFiles = _.cloneDeep(this.state.files);
+                let fileIndex = _.findIndex(this.state.files, (o) => {return !("children" in o)});
+                if (fileIndex === -1) {
+                    newFiles.push(newNode);
+                } else {
+                    newFiles.splice(fileIndex, 0, newNode);
+                }
+                this.setState({
+                    files: newFiles,
+                });
+            } else {
+                console.log('unknown action');
+            }
         } else {
             e.stopPropagation();
             let pathList = target.children[0].id.split('/');
@@ -445,7 +446,7 @@ class App extends React.Component {
                     untitled: true,
                     directory: newCurNode,
                 };
-            } else {
+            } else if (data.action === 'new-directory') {
                 newNode = {
                     name: undefined,
                     untitled: true,
@@ -457,6 +458,8 @@ class App extends React.Component {
                     }],
                 };
 
+            } else {
+                console.log('unknown action');
             }
             if (newCurNode.empty) {
                 newCurNode.empty = false;
@@ -488,31 +491,6 @@ class App extends React.Component {
                 animating: animating,
             });
         }
-        // let curNode = this.state.cursor;
-        // let pathList = utils.getNodePathList(curNode);
-
-        // let newFiles = _.cloneDeep(this.state.files);
-        // let newCurNode = this.getNodeFromPathList(newFiles, pathList);
-
-        // let newNode = {
-        //     name: 'newFile',
-        // };
-        // newCurNode['toggled'] = true;
-        // console.log(newCurNode);
-        // if ("children" in newCurNode) {
-        //     // create under this directory
-        //     newCurNode.children.push(newNode);
-        // } else if ("directory" in newCurNode) {
-        //     // create under parent directory
-        //     newCurNode.directory.children.push(newNode);
-        // } else {
-        //     // create at top level
-        //     newFiles.push(newNode);
-        // }
-        // this.setState({
-        //     files: newFiles,
-        //     cursor: newCurNode,
-        // });
     }
 
     restoreSession(accessToken) {
@@ -867,19 +845,6 @@ class App extends React.Component {
         });
     }
 
-    handleRename(event) {
-        let renameIndex = this.props.files.indexOf(this.state.filename);
-        let newModules = this.props.files.slice();
-        newModules[renameIndex] = event.target.value;
-        // set old name so backend knows to rename
-        this.setState({
-            oldName: this.state.filename,
-            filename: event.target.value,
-            files: newModules,
-        });
-        this.props.onRename(newModules);
-    }
-
     render() {
         let login_info = '';
         if (this.props.username.length !== 0) {
@@ -1025,11 +990,7 @@ class App extends React.Component {
                         onInputFilenameChange={this.handleInputFilenameChange}
                         onRender={this.handleRender} 
                         onCodeChange={this.handleCodeChange}
-                        onRename={this.handleRename}
-                        onExpandDirectory={this.fetchDirectoryContents}
-                        onSelectNode={this.handleSelectNode}
                         onNewFile={this.handleNewFile}
-                        onNewDirectory={this.handleNewDirectory}
                         onToggle={this.handleToggle}
                         onNewFileName={this.handleNewFileName}
                         onFileRename={this.handleFileRename}

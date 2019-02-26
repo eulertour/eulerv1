@@ -5,7 +5,6 @@ import saveIcon from '../assets/icon-save@3x.svg';
 import settingsIcon from '../assets/icon-settings@3x.svg';
 import TreeExample from '../components/tree.jsx';
 import collapseTreeIcon from '../assets/icon-left@3x.svg';
-import * as consts from '../constants.js';
 require('codemirror/lib/codemirror.css');
 require('codemirror/theme/material.css');
 require('codemirror/theme/neat.css');
@@ -113,14 +112,10 @@ class Editor extends Component {
                             cursor={this.props.cursor}
                             animating={this.props.animating}
 
-                            onExpandDirectory={this.props.onExpandDirectory}
-                            onSelectNode={this.props.onSelectNode}
                             onTreeToggle={this.handleTreeToggle}
-                            onNewFile={this.props.onNewFile}
-                            onNewDirectory={this.props.onNewDirectory}
                             onToggle={this.props.onToggle}
+                            onNewFile={this.props.onNewFile}
                             onNewFileName={this.props.onNewFileName}
-                            onNewFileNameChange={this.props.onNewFileNameChange}
                             onFileRename={this.props.onFileRename}
                             onFileMove={this.props.onFileMove}
                             onFileDelete={this.props.onFileDelete}
@@ -143,8 +138,7 @@ class Editor extends Component {
                                 this.props.onCodeChange(value);
                             }}
                             onChange={(editor, data, value) => {
-                                // only autosave after typing, not changing
-                                // files
+                                // don't autosave after changing files
                                 if (data.origin !== undefined) {
                                     this.props.onSetAutosaveTimeout();
                                 }
