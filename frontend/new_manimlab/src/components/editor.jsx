@@ -48,9 +48,7 @@ class Editor extends Component {
         if (this.state.treeCollapsed) {
             collapseArrow = (
                 <div
-                    style={{
-                        width: this.state.gutterWidth + 'px',
-                    }}
+                    style={{width: this.state.gutterWidth + 'px'}}
                     className="expand-button"
                     onClick={this.handleTreeToggle}
                 >
@@ -65,10 +63,7 @@ class Editor extends Component {
         filename = (
             <div className="arrow-and-filename">
                 {collapseArrow}
-                <div
-                    className="filename"
-                    key="filename"
-                >
+                <div className="filename" key="filename">
                     {this.props.filename}
                 </div>
             </div>
@@ -112,14 +107,14 @@ class Editor extends Component {
                             cursor={this.props.cursor}
                             animating={this.props.animating}
 
-                            onTreeToggle={this.handleTreeToggle}
-                            onToggle={this.props.onToggle}
+                            onAnimationComplete={this.props.onAnimationComplete}
+                            onFileDelete={this.props.onFileDelete}
+                            onFileMove={this.props.onFileMove}
+                            onFileRename={this.props.onFileRename}
                             onNewFile={this.props.onNewFile}
                             onNewFileName={this.props.onNewFileName}
-                            onFileRename={this.props.onFileRename}
-                            onFileMove={this.props.onFileMove}
-                            onFileDelete={this.props.onFileDelete}
-                            onAnimationComplete={this.props.onAnimationComplete}
+                            onToggle={this.props.onToggle}
+                            onTreeToggle={this.handleTreeToggle}
                         />
                     }
                     <div className="editor-part">
@@ -153,7 +148,7 @@ class Editor extends Component {
                             type="text"
                             placeholder="select file"
                             spellCheck="false"
-                            value={this.props.inputFilename}
+                            value={this.props.filenameInput}
                             onChange={this.props.onInputFilenameChange}
                         />
                         <input
@@ -161,8 +156,8 @@ class Editor extends Component {
                             type="text"
                             placeholder="select Scene"
                             spellCheck="false"
-                            value={this.props.scene}
-                            onChange={this.props.onSceneChange}
+                            value={this.props.sceneInput}
+                            onChange={this.props.onInputSceneChange}
                         />
                         <div
                             className="render-button"

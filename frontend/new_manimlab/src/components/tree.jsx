@@ -133,7 +133,7 @@ class TreeExample extends React.Component {
     render() {
         let decorators = Treebeard.defaultProps.decorators;
         let animations = Treebeard.defaultProps.animations;
-        animations.drawer = (/* props */) => ({
+        animations.drawer = () => ({
             enter: {
                 animation: 'slideDown',
                 duration: 300,

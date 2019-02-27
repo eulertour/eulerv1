@@ -44,82 +44,30 @@ class App extends React.Component {
             showFileMoveModal: false,
             showLoginModal: false,
         }
-        this.logOut = this.logOut.bind(this);
-        this.restoreSession = this.restoreSession.bind(this);
-        this.handleRenderFinished = this.handleRenderFinished.bind(this);
-        this.handleRender = this.handleRender.bind(this);
-        this.handleSave = this.handleSave.bind(this);
-        this.handleCodeChange = this.handleCodeChange.bind(this);
-        this.handleSceneChange = this.handleSceneChange.bind(this);
-        this.handleFilenameChange = this.handleFilenameChange.bind(this);
-        this.handleInputFilenameChange = this.handleInputFilenameChange.bind(this);
         this.fetchDirectoryContents = this.fetchDirectoryContents.bind(this);
         this.fetchFileContents = this.fetchFileContents.bind(this);
+        this.handleAnimationComplete=this.handleAnimationComplete.bind(this);
+        this.handleCodeChange = this.handleCodeChange.bind(this);
+        this.handleFileDelete=this.handleFileDelete.bind(this);
+        this.handleFileRename=this.handleFileRename.bind(this);
+        this.handleFilenameChange = this.handleFilenameChange.bind(this);
+        this.handleInputFilenameChange = this.handleInputFilenameChange.bind(this);
+        this.handleInputSceneChange = this.handleInputSceneChange.bind(this);
         this.handleModalClick = this.handleModalClick.bind(this);
         this.handleNewFile = this.handleNewFile.bind(this);
         this.handleNewFileName = this.handleNewFileName.bind(this);
-        this.handleToggle = this.handleToggle.bind(this);
-        this.handleFileRename=this.handleFileRename.bind(this);
-        this.handleFileMove=this.handleFileMove.bind(this);
-        this.handleFileDelete=this.handleFileDelete.bind(this);
+        this.handleRender = this.handleRender.bind(this);
+        this.handleRenderFinished = this.handleRenderFinished.bind(this);
+        this.handleSave = this.handleSave.bind(this);
+        this.handleSceneChange = this.handleSceneChange.bind(this);
         this.handleSetAutosaveTimeout=this.handleSetAutosaveTimeout.bind(this);
-        this.handleAnimationComplete=this.handleAnimationComplete.bind(this);
-        this.listDirs=this.listDirs.bind(this);
+        this.handleToggle = this.handleToggle.bind(this);
+        this.logOut = this.logOut.bind(this);
+        this.restoreSession = this.restoreSession.bind(this);
     }
 
     handleAnimationComplete() {
         this.setState({editorAnimating: false});
-    }
-
-    ensureDirectoryTree(node) {
-        if (node.loading) {
-            this.fetchDirectoryTree(node);
-        } else if ('children' in node) {
-            node.children.forEach((child) => {
-                this.ensureDirectoryTree(child);
-            });
-        }
-    }
-
-    fetchDirectoryTree(node) {
-        axios.post(
-            consts.TREE_URL,
-            {
-                // TODO: this should be a path list
-                path: utils.getNodePathList(node).join('/'),
-                project: node.project,
-            },
-            {headers: this.getHeadersDict()},
-        )
-        .then(response => {
-            console.log(response.data);
-        })
-        .catch(error => {
-        
-        });
-    }
-
-    listDirs(nodeList) {
-        if (nodeList === undefined) {
-            return null;
-        }
-        return (
-            nodeList.map((node) => {
-                if (node.library || !('children' in node)) {
-                    return null;
-                }
-                let children;
-                if (!node.empty) {
-                    children = this.listDirs(node.children);
-                }
-                return (
-                    <li key={node.name}>
-                        <p>{node.name}</p>
-                        {children}
-                    </li>
-                );
-            })
-        );
     }
 
     handleSetAutosaveTimeout() {
@@ -139,20 +87,13 @@ class App extends React.Component {
         console.log(data.action + ' ' + target.children[0].id);
     }
 
-    handleFileMove(e, data, target) {
-        e.stopPropagation();
-        console.log(data.action + ' ' + target.children[0].id);
-        this.setState({showFileMoveModal: true});
-    }
-
     handleFileDelete(e, data, target) {
         e.stopPropagation();
-        console.log(data.action + ' ' + target.children[0].id);
-
         let filePath = target.children[0].id;
+        let pathList = filePath.split('/');
         let delNode = this.getNodeFromPathList(
             this.state.editorFiles,
-            filePath.split('/'),
+            pathList,
         );
         axios.delete(consts.MODULE_DELETE_URL, {
             params: {
@@ -163,30 +104,32 @@ class App extends React.Component {
             headers: this.getHeadersDict(),
         })
         .then(response => {
-            let newFiles = _.cloneDeep(this.state.editorFiles);
-            let delNode = this.getNodeFromPathList(
-                newFiles,
-                filePath.split('/'),
-            );
+            let filesCopy = _.cloneDeep(this.state.editorFiles);
+            let delNode = this.getNodeFromPathList(filesCopy, pathList);
             if ('directory' in delNode) {
-                _.remove(delNode.directory.children,
-                    (o) => {return _.isEqual(o, delNode)});
+                _.remove(
+                    delNode.directory.children,
+                    (o) => {return _.isEqual(o, delNode)}
+                );
                 if (delNode.directory.children.length === 0) {
-                    delNode.directory.children = [{
-                        name: '(empty)',
-                        empty: true,
-                        readOnly: true,
-                    }];
+                    delNode.directory.children = consts.NO_CHILDREN;
                     delNode.directory.empty = true;
                 }
             } else {
-                _.remove(newFiles, (o) => {return _.isEqual(o, delNode)});
+                _.remove(filesCopy, (o) => {return _.isEqual(o, delNode)});
             }
             clearTimeout(this.state.autosaveTimer);
+            if (!_.isEmpty(this.state.editorCursor) && !delNode.active) {
+                this.getNodeFromPathList(
+                    filesCopy,
+                    utils.getNodePathList(this.state.editorCursor),
+                ).active = false;
+            }
             this.setState({
-                editorFiles: newFiles,
+                editorFiles: filesCopy,
                 editorFilename: "",
                 editorCode: "",
+                editorCursor: {},
             });
         })
         .catch(error => {
@@ -197,24 +140,23 @@ class App extends React.Component {
     }
 
     getHeadersDict() {
-        if (this.props.access.length !== 0) {
-            return {'Authorization': 'Bearer ' + this.props.access};
-        } else {
-            return {};
-        }
+        return this.props.access.length !== 0 ?
+            {'Authorization': 'Bearer ' + this.props.access} :
+            {};
     }
 
     handleNewFileName(node, name) {
-        let newFiles = _.cloneDeep(this.state.editorFiles);
-        let newNode = this.getNodeFromPathList(
-            newFiles,
+        let filesCopy = _.cloneDeep(this.state.editorFiles);
+        let nodeCopy = this.getNodeFromPathList(
+            filesCopy,
             utils.getNodePathList(node),
         );
-        let siblingList = 'directory' in node
-            ? newNode.directory.children : newFiles;
+        let siblingList = 'directory' in node ?
+            nodeCopy.directory.children :
+            filesCopy;
+
         let valid = true;
         let errorMsg = "";
-        console.log(name);
         if (_.find(siblingList, (o) => {return o.name === name})) {
             valid = false;
             errorMsg = "filename is taken";
@@ -225,10 +167,9 @@ class App extends React.Component {
         if (!valid) {
             alert(errorMsg);
             _.remove(siblingList, (o) => {return _.isEqual(o, node)});
-            this.setState({editorFiles: newFiles});
+            this.setState({editorFiles: filesCopy});
             return;
         }
-
         let pathList = utils.getNodePathList(node);
         pathList[pathList.length - 1] = name;
         axios.post(
@@ -243,25 +184,24 @@ class App extends React.Component {
             {headers: this.getHeadersDict()},
         )
         .then(response => {
-            newNode['untitled'] = false;
-            newNode['name'] = name;
-            newNode['project'] = this.state.project;
+            nodeCopy['untitled'] = false;
+            nodeCopy['name'] = name;
+            nodeCopy['project'] = this.state.project;
 
-            let libraryDirs;
-            // sort the directories
             // TODO: actually check the number of lib dirs
+            let libraryDirs;
             if (!('directory' in node)) {
-                libraryDirs = newFiles.slice(0, 1);
-                siblingList = newFiles.slice(1);
+                libraryDirs = filesCopy.slice(0, 1);
+                siblingList = filesCopy.slice(1);
             } else {
                 libraryDirs = [];
-                siblingList = newNode.directory.children;
+                siblingList = nodeCopy.directory.children;
             }
             let fileIndex = siblingList.findIndex(
                 (o) => {return !("children" in o)}
             );
             if (fileIndex === -1) {
-                fileIndex = newFiles.length;
+                fileIndex = filesCopy.length;
             }
             let dirArray = siblingList.slice(0, fileIndex);
             let fileArray = siblingList.slice(fileIndex);
@@ -274,7 +214,7 @@ class App extends React.Component {
                     return 0;
             };
             if ('children' in node) {
-                newNode['empty'] = true;
+                nodeCopy['empty'] = true;
                 dirArray = dirArray.sort(nodeSort);
             } else {
                 fileArray = fileArray.sort(nodeSort);
@@ -282,26 +222,20 @@ class App extends React.Component {
             fileArray = dirArray.concat(fileArray);
             if (!('directory' in node)) {
                 // TODO: actually check the number of lib dirs
-                newFiles = libraryDirs.concat(fileArray);
+                filesCopy = libraryDirs.concat(fileArray);
             } else {
-                newNode.directory.children = libraryDirs.concat(fileArray);
+                nodeCopy.directory.children = libraryDirs.concat(fileArray);
             }
-            this.setState({editorFiles: newFiles});
+            this.setState({editorFiles: filesCopy});
         })
         .catch(error => {
             if (siblingList.length === 1) {
-                newNode.directory.empty = true;
-                newNode.directory.children = [{
-                    name: '(empty)',
-                    empty: true,
-                    readOnly: true,
-                }];
+                nodeCopy.directory.empty = true;
+                nodeCopy.directory.children = consts.NO_CHILDREN;
             } else {
                 _.remove(siblingList, (o) => {return _.isEqual(o, node)});
             }
-            this.setState({
-                editorFiles: newFiles,
-            });
+            this.setState({editorFiles: filesCopy});
             if (error.response !== undefined &&
                 error.response.statusText === 'Unauthorized') {
                 this.setState({showLoginModal: true});
@@ -310,137 +244,108 @@ class App extends React.Component {
                 error.response.status === 400) {
                 console.log(error.response.data.error);
                 // they probably gave an illegal filename
-                this.setState({ });
+                this.setState({});
             }
         });
     }
 
     handleToggle(node, toggled) {
         if (node.untitled || (!('children' in node) && node.empty)) {
-            console.log('returning');
             return;
         }
         clearInterval(this.state.autosaveTimer);
-        let newFiles = _.cloneDeep(this.state.editorFiles);
-        let newNode = this.getNodeFromPathList(newFiles, utils.getNodePathList(node));
-        let newCursor = this.getNodeFromPathList(newFiles, utils.getNodePathList(this.state.editorCursor));
+        let filesCopy = _.cloneDeep(this.state.editorFiles);
+        let nodeCopy = this.getNodeFromPathList(
+            filesCopy, utils.getNodePathList(node));
+        let oldCursorCopy = this.getNodeFromPathList(
+            filesCopy, utils.getNodePathList(this.state.editorCursor));
+        let newCursorCopy = this.state.editorCursor;;
 
         if (!("children" in node)) {
-            newNode.active = true;
+            nodeCopy.active = true;
             if (!_.isEmpty(this.state.editorCursor)) {
-                newCursor.active = false;
+                oldCursorCopy.active = false;
             }
-            this.setState({editorCursor: newNode});
-        }
-
-        if ('children' in node) {
-            newNode.toggled = toggled;
+            newCursorCopy = nodeCopy;
+        } else {
+            nodeCopy.toggled = toggled;
         }
         if ('children' in node && toggled && node.loading) {
-            this.fetchDirectoryContents(newNode);
+            this.fetchDirectoryContents(nodeCopy);
         } else {
-            this.fetchFileContents(newNode);
+            this.fetchFileContents(nodeCopy);
         }
-
-        this.setState({editorFiles: newFiles});
+        this.setState({
+            editorFiles: filesCopy,
+            editorCursor: newCursorCopy,
+        });
     }
 
     handleNewFile(e, data, target) {
+        let action;
         if (data === undefined) {
-            // top level file
-            if (e === 'new-file') {
-                let newNode = {
-                    name: undefined,
-                    untitled: true,
-                };
-                let newFiles = _.cloneDeep(this.state.editorFiles);
-                newFiles.push(newNode);
-                this.setState({
-                    editorFiles: newFiles,
-                });
-            } else if (e === 'new-directory') {
-                let newNode = {
-                    name: undefined,
-                    untitled: true,
-                    empty: true,
-                    children: [{
-                        name: '(empty)',
-                        empty: true,
-                        readOnly: true,
-                    }],
-                };
-                let newFiles = _.cloneDeep(this.state.editorFiles);
-                let fileIndex = _.findIndex(this.state.editorFiles, (o) => {return !("children" in o)});
-                if (fileIndex === -1) {
-                    newFiles.push(newNode);
-                } else {
-                    newFiles.splice(fileIndex, 0, newNode);
-                }
-                this.setState({
-                    editorFiles: newFiles,
-                });
-            } else {
-                console.log('unknown action');
-            }
+            action = e;
         } else {
             e.stopPropagation();
+            action = data.action;
+        }
+        if (!_.find(['new-file', 'new-directory'],
+            (o) => {return o === action})) {
+            console.log('unknown action');
+            return;
+        }
+
+        let filesCopy = _.cloneDeep(this.state.editorFiles);
+        let animating = this.state.editorAnimating;
+        let nodeCopy;
+        if (action === 'new-file') {
+            nodeCopy = {
+                name: undefined,
+                untitled: true,
+            };
+        } else {
+            nodeCopy = {
+                name: undefined,
+                untitled: true,
+                empty: true,
+                children: consts.NO_CHILDREN,
+            };
+        }
+        let siblingList;
+        let fileIndex;
+        if (data === undefined) {
+            siblingList = filesCopy;
+        } else {
             let pathList = target.children[0].id.split('/');
-            let newFiles = _.cloneDeep(this.state.editorFiles);
-            let newCurNode = this.getNodeFromPathList(newFiles, pathList);
-
-            // this.ensureDirectoryTree(newCurNode);
-            let newNode;
-            if (data.action === 'new-file') {
-                newNode = {
-                    name: undefined,
-                    untitled: true,
-                    directory: newCurNode,
-                };
-            } else if (data.action === 'new-directory') {
-                newNode = {
-                    name: undefined,
-                    untitled: true,
-                    directory: newCurNode,
-                    children: [{
-                        name: '(empty)',
-                        empty: true,
-                        readOnly: true,
-                    }],
-                };
-
-            } else {
-                console.log('unknown action');
-            }
-            if (newCurNode.empty) {
-                newCurNode.empty = false;
-                newCurNode.children = [newNode];
-            } else {
-                if (data.action === 'new-file') {
-                    newCurNode.children.push(newNode);
-                } else {
-                    let fileIndex = newCurNode.children.findIndex(
-                        (o) => {return !("children" in o)}
-                    );
-                    if (fileIndex === -1) {
-                        fileIndex = newCurNode.children.length;
-                    }
-                    newCurNode.children =
-                        newCurNode.children.slice(0, fileIndex)
-                            .concat(newNode)
-                            .concat(newCurNode.children.slice(fileIndex));
-                }
-            }
-            let animating;
-            if (!newCurNode.toggled) {
-                newCurNode.toggled = true;
+            let newParent = this.getNodeFromPathList(filesCopy, pathList);
+            siblingList = newParent.children;
+            if (!newParent.toggled) {
+                newParent.toggled = true;
                 animating = true;
             }
-            newCurNode.loading = false;
-            this.setState({
-                editorFiles: newFiles,
-                editorAnimating: animating,
-            });
+            newParent.loading = false;
+            nodeCopy.directory = newParent;
+            if (newParent.empty) {
+                newParent.empty = false;
+                siblingList.length = 0;
+            }
         }
+        if (action === 'new-file') {
+            fileIndex = siblingList.length;
+        } else {
+            fileIndex = _.findIndex(
+                siblingList,
+                (o) => {return !("children" in o)}
+            );
+            if (fileIndex === -1) {
+                fileIndex = siblingList.length;
+            }
+        }
+        siblingList.splice(fileIndex, 0, nodeCopy);
+        this.setState({
+            editorFiles: filesCopy,
+            editorAnimating: animating,
+        });
     }
 
     restoreSession(accessToken) {
@@ -469,13 +374,13 @@ class App extends React.Component {
                 return obj;
             });
             this.setState({
+                editorCode: response.data.code || this.state.editorCode,
                 editorFilename: response.data.filename || this.state.editorFilename,
                 editorFilenameInput: response.data.filename || this.state.editorFilenameInput,
-                editorScene: response.data.scene || this.state.videoScene,
-                videoScene: response.data.scene || this.state.videoScene,
                 editorFiles: files || this.state.editorFiles,
-                editorCode: response.data.code || this.state.editorCode,
+                editorSceneInput: response.data.scene || this.state.videoScene,
                 project: response.data.project || this.state.project,
+                videoScene: response.data.scene || this.state.videoScene,
             });
             if ('username' in response.data) {
                 this.props.onSessionRestore(response.data['username'])
@@ -583,8 +488,8 @@ class App extends React.Component {
             {headers: this.getHeadersDict()},
         )
         .then(response => {
-            let newFiles = _.cloneDeep(this.state.editorFiles);
-            let newNode = this.getNodeFromPathList(newFiles, pathList);
+            let filesCopy = _.cloneDeep(this.state.editorFiles);
+            let nodeCopy = this.getNodeFromPathList(filesCopy, pathList);
             if (response.data.length !== 0) {
                 let files = response.data.map(obj => {
                     if (obj.directory) {
@@ -600,17 +505,13 @@ class App extends React.Component {
                     }
                     return obj;
                 });
-                newNode['children'] = files;
+                nodeCopy['children'] = files;
             } else {
-                newNode['empty'] = true;
-                newNode['children'] = [{
-                    name: '(empty)',
-                    empty: true,
-                    readOnly: true,
-                }];
+                nodeCopy['empty'] = true;
+                nodeCopy['children'] = consts.NO_CHILDREN;
             }
-            newNode['loading'] = false;
-            this.setState({editorFiles: newFiles});
+            nodeCopy['loading'] = false;
+            this.setState({editorFiles: filesCopy});
         })
         .catch(error => {
             console.log(error);
@@ -632,6 +533,10 @@ class App extends React.Component {
 
     handleInputFilenameChange(event) {
         this.setState({editorFilenameInput: event.target.value});
+    }
+
+    handleInputSceneChange(event) {
+        this.setState({editorSceneInput: event.target.value});
     }
 
     logOut() {
@@ -845,35 +750,6 @@ class App extends React.Component {
                 </div>
             );
         }
-        let fileModal;
-        if (this.state.showFileMoveModal) {
-            let newFiles = _.cloneDeep(this.state.editorFiles);
-            newFiles.forEach((node) => {
-                if (!node.library && 'children' in node) {
-                    this.ensureDirectoryTree(node); 
-                }
-            });
-		    fileModal = (
-                <div
-                    className="modal-background"
-                    closeonclick="true"
-                    onClick={this.handleModalClick}
-                >
-                    <img
-                        className="close-icon"
-                        src={closeIcon}
-                        alt="close"
-                        closeonclick="true"
-                    />
-                    <div className="directory-select">
-                        <ul>
-                        <li>root</li>
-                        {this.listDirs(this.state.editorFiles)}
-                        </ul>
-                    </div>
-                </div>
-            );
-        }
         return (
             <div className="page-container">
                 <div className="header">
@@ -912,24 +788,24 @@ class App extends React.Component {
                         saveMessage={this.state.editorSaveMessage}
                         sceneInput={this.state.editorSceneInput}
 
-                        onSave={this.handleSave}
-                        onSceneChange={this.handleSceneChange}
+                        onAnimationComplete={this.handleAnimationComplete}
+                        onCodeChange={this.handleCodeChange}
+                        onFileDelete={this.handleFileDelete}
+                        onFileMove={this.handleFileMove}
+                        onFileRename={this.handleFileRename}
                         onFilenameChange={this.handleFilenameChange}
                         onInputFilenameChange={this.handleInputFilenameChange}
-                        onRender={this.handleRender} 
-                        onCodeChange={this.handleCodeChange}
+                        onInputSceneChange={this.handleInputSceneChange}
                         onNewFile={this.handleNewFile}
-                        onToggle={this.handleToggle}
                         onNewFileName={this.handleNewFileName}
-                        onFileRename={this.handleFileRename}
-                        onFileMove={this.handleFileMove}
-                        onFileDelete={this.handleFileDelete}
+                        onRender={this.handleRender} 
+                        onSave={this.handleSave}
+                        onSceneChange={this.handleSceneChange}
                         onSetAutosaveTimeout={this.handleSetAutosaveTimeout}
-                        onAnimationComplete={this.handleAnimationComplete}
+                        onToggle={this.handleToggle}
                     />
                 </div>
                 {loginModal}
-                {fileModal}
             </div>
         );
     }

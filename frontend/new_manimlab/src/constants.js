@@ -22,3 +22,4 @@ export const TREE_URL = 'http://eulertour.com:8000/api/tree/';
 // export const DEFAULT_LOGS =  'user@manim:~$ ';
 export const DEFAULT_LOGS =  'Logs will be displayed here';
 export const DEFAULT_SELECTED_SCENE = 'No Scene selected';
+export const NO_CHILDREN = [{name: '(empty)', empty: true, readOnly: true}];
