@@ -404,7 +404,7 @@ class NewSave(generics.GenericAPIView):
                 module, created = Module.objects.update_or_create(
                     owner=request.user,
                     project=project,
-                    source__endswith=os.sep + request.data['name'],
+                    source=media_path,
                     defaults=defaults,
                 )
             except Exception:

@@ -82,10 +82,6 @@ class App extends React.Component {
     }
 
     fetchDirectoryTree(node) {
-        let headers = {};
-        if (this.props.access.length !== 0) {
-            headers = {'Authorization': 'Bearer ' + this.props.access};
-        }
         axios.post(
             consts.TREE_URL,
             {
@@ -93,7 +89,7 @@ class App extends React.Component {
                 path: utils.getNodePathList(node).join('/'),
                 project: node.project,
             },
-            {headers: headers},
+            {headers: this.getHeadersDict()},
         )
         .then(response => {
             console.log(response.data);
@@ -158,19 +154,13 @@ class App extends React.Component {
             this.state.editorFiles,
             filePath.split('/'),
         );
-        let headers;
-        if (this.props.access.length !== 0) {
-            headers = {'Authorization': 'Bearer ' + this.props.access};
-        } else {
-            headers = {};
-        }
         axios.delete(consts.MODULE_DELETE_URL, {
             params: {
                 project: this.state.project,
                 name: filePath,
                 directory: 'children' in delNode ? 1 : 0,
             },
-            headers: headers,
+            headers: this.getHeadersDict(),
         })
         .then(response => {
             let newFiles = _.cloneDeep(this.state.editorFiles);
@@ -206,144 +196,100 @@ class App extends React.Component {
         });
     }
 
+    getHeadersDict() {
+        if (this.props.access.length !== 0) {
+            return {'Authorization': 'Bearer ' + this.props.access};
+        } else {
+            return {};
+        }
+    }
+
     handleNewFileName(node, name) {
-        // TODO: will fail for non top-level dirs
         let newFiles = _.cloneDeep(this.state.editorFiles);
         let newNode = this.getNodeFromPathList(
             newFiles,
-            utils.getNodePathList(node)
+            utils.getNodePathList(node),
         );
-
-        // check if the name is taken
-        let sibling_list;
-        if ('directory' in node) {
-            sibling_list = newNode.directory.children;
-        } else {
-            sibling_list = newFiles;
-        }
+        let siblingList = 'directory' in node
+            ? newNode.directory.children : newFiles;
         let valid = true;
         let errorMsg = "";
-        if (_.find(sibling_list,
-            (o) => {return o.name === name})) {
+        console.log(name);
+        if (_.find(siblingList, (o) => {return o.name === name})) {
             valid = false;
             errorMsg = "filename is taken";
-        }
-        if (name.indexOf('/') !== -1) {
+        } else if (name.indexOf('/') !== -1) {
             valid = false;
             errorMsg = "invalid filename";
         }
         if (!valid) {
             alert(errorMsg);
-            _.remove(sibling_list, (o) => {return _.isEqual(o, node)});
-            this.setState({
-                editorFiles: newFiles,
-            });
+            _.remove(siblingList, (o) => {return _.isEqual(o, node)});
+            this.setState({editorFiles: newFiles});
             return;
         }
 
-        let headers;
-        if (this.props.access.length !== 0) {
-            headers = {'Authorization': 'Bearer ' + this.props.access};
-        } else {
-            headers = {};
-        }
         let pathList = utils.getNodePathList(node);
         pathList[pathList.length - 1] = name;
         axios.post(
             consts.SAVE_URL,
             {
-                // TODO: this should be a path list
+                // TODO: this should maybe be a path list
+                // (if you want to REALLY enforce separation)
                 name: pathList.join('/'),
                 project: this.state.project,
                 directory: "children" in node,
             },
-            {headers: headers},
+            {headers: this.getHeadersDict()},
         )
         .then(response => {
             newNode['untitled'] = false;
             newNode['name'] = name;
             newNode['project'] = this.state.project;
 
+            let libraryDirs;
+            // sort the directories
+            // TODO: actually check the number of lib dirs
+            if (!('directory' in node)) {
+                libraryDirs = newFiles.slice(0, 1);
+                siblingList = newFiles.slice(1);
+            } else {
+                libraryDirs = [];
+                siblingList = newNode.directory.children;
+            }
+            let fileIndex = siblingList.findIndex(
+                (o) => {return !("children" in o)}
+            );
+            if (fileIndex === -1) {
+                fileIndex = newFiles.length;
+            }
+            let dirArray = siblingList.slice(0, fileIndex);
+            let fileArray = siblingList.slice(fileIndex);
+            let nodeSort = (o1, o2) => {
+                if (o1.name < o2.name)
+                    return -1;
+                else if (o1.name > o2.name)
+                    return 1;
+                else
+                    return 0;
+            };
             if ('children' in node) {
                 newNode['empty'] = true;
-                // sort the directories
-                let libraryDirs;
-                let siblingDirs;
-                if (!('directory' in node)) {
-                    // TODO: actually check the number of lib dirs
-                    libraryDirs = newFiles.slice(0, 1);
-                    siblingDirs = newFiles.slice(1);
-                } else {
-                    libraryDirs = [];
-                    siblingDirs = newNode.directory.children;
-                }
-                let fileIndex = siblingDirs.findIndex(
-                    (o) => {return !("children" in o)}
-                );
-                if (fileIndex === -1) {
-                    fileIndex = newFiles.length;
-                }
-                let subarray = siblingDirs.slice(0, fileIndex);
-                subarray = subarray.sort((o1, o2) => {
-                    if (o1.name < o2.name)
-                        return -1;
-                    else if (o1.name > o2.name)
-                        return 1;
-                    else
-                        return 0;
-                });
-                let rest = siblingDirs.slice(fileIndex);
-                subarray = subarray.concat(rest);
-                if (!('directory' in node)) {
-                    // TODO: actually check the number of lib dirs
-                    newFiles = libraryDirs.concat(subarray);
-                } else {
-                    newNode.directory.children = libraryDirs.concat(subarray);
-                }
-                this.setState({
-                    editorFiles: newFiles,
-                });
+                dirArray = dirArray.sort(nodeSort);
             } else {
-                // sort the files
-                // TODO: actually check the number of lib dirs
-                let libraryDirs;
-                let siblingDirs;
-                if (!('directory' in node)) {
-                    // TODO: actually check the number of lib dirs
-                    libraryDirs = newFiles.slice(0, 1);
-                    siblingDirs = newFiles.slice(1);
-                } else {
-                    libraryDirs = [];
-                    siblingDirs = newNode.directory.children;
-                }
-                // TODO: handle non top-level dirs
-                let fileIndex = siblingDirs.findIndex(
-                    (o) => {return !("children" in o)}
-                );
-                let subarray = siblingDirs.slice(fileIndex);
-                subarray = subarray.sort((o1, o2) => {
-                    if (o1.name < o2.name)
-                        return -1;
-                    else if (o1.name > o2.name)
-                        return 1;
-                    else
-                        return 0;
-                });
-                let rest = siblingDirs.slice(0, fileIndex);
-                subarray = rest.concat(subarray);
-                if (!('directory' in node)) {
-                    // TODO: actually check the number of lib dirs
-                    newFiles = libraryDirs.concat(subarray);
-                } else {
-                    newNode.directory.children = libraryDirs.concat(subarray);
-                }
-                this.setState({
-                    editorFiles: newFiles,
-                });
+                fileArray = fileArray.sort(nodeSort);
             }
+            fileArray = dirArray.concat(fileArray);
+            if (!('directory' in node)) {
+                // TODO: actually check the number of lib dirs
+                newFiles = libraryDirs.concat(fileArray);
+            } else {
+                newNode.directory.children = libraryDirs.concat(fileArray);
+            }
+            this.setState({editorFiles: newFiles});
         })
         .catch(error => {
-            if (sibling_list.length === 1) {
+            if (siblingList.length === 1) {
                 newNode.directory.empty = true;
                 newNode.directory.children = [{
                     name: '(empty)',
@@ -351,7 +297,7 @@ class App extends React.Component {
                     readOnly: true,
                 }];
             } else {
-                _.remove(sibling_list, (o) => {return _.isEqual(o, node)});
+                _.remove(siblingList, (o) => {return _.isEqual(o, node)});
             }
             this.setState({
                 editorFiles: newFiles,
@@ -498,10 +444,6 @@ class App extends React.Component {
     }
 
     restoreSession(accessToken) {
-        let headers = {};
-        if (accessToken.length !== 0) {
-            headers = {'Authorization': 'Bearer ' + accessToken};
-        }
         axios.post(
             consts.SESSION_URL,
             {
@@ -510,7 +452,7 @@ class App extends React.Component {
                 project: this.state.project,
                 directory: true,
             },
-            {headers: headers},
+            {headers: this.getHeadersDict()},
         )
         .then(response => {
             let files = response.data.files.map(obj => {
@@ -572,17 +514,13 @@ class App extends React.Component {
         if ('children' in node) {
             return;
         }
-        let headers = {};
-        if (this.props.access.length !== 0) {
-            headers = {'Authorization': 'Bearer ' + this.props.access};
-        }
         axios.post(
             consts.GET_FILES_URL,
             {
                 project: node.project,
                 pathList: utils.getNodePathList(node),
             },
-            {headers: headers},
+            {headers: this.getHeadersDict()},
         )
         .then(response => {
             let displayingLibraryCode;
@@ -636,17 +574,13 @@ class App extends React.Component {
     fetchDirectoryContents(node) {
         let pathList = utils.getNodePathList(node);
         
-        let headers = {};
-        if (this.props.access.length !== 0) {
-            headers = {'Authorization': 'Bearer ' + this.props.access};
-        }
         axios.post(
             consts.GET_FILES_URL,
             {
                 project: node.project,
                 pathList: pathList,
             },
-            {headers: headers},
+            {headers: this.getHeadersDict()},
         )
         .then(response => {
             let newFiles = _.cloneDeep(this.state.editorFiles);
@@ -764,14 +698,10 @@ class App extends React.Component {
 
     // TODO: rendering points to the wrong file
     handleRender() {
-        let headers = {};
-        if (this.props.access.length !== 0) {
-            headers = {'Authorization': 'Bearer ' + this.props.access};
-        }
         axios({
             method: 'post',
             url: consts.RENDER_URL,
-            headers: headers,
+            headers: this.getHeadersDict(),
             data: {
                 filename: this.state.editorFilenameInput,
                 scene: this.state.editorSceneInput,
@@ -807,12 +737,6 @@ class App extends React.Component {
             alert('sorry');
         }
         // TODO: implement save-on-signup
-        let headers;
-        if (this.props.access.length !== 0) {
-            headers = {'Authorization': 'Bearer ' + this.props.access};
-        } else {
-            headers = {};
-        }
         axios.post(
             consts.SAVE_URL,
             {
@@ -823,7 +747,7 @@ class App extends React.Component {
                 code: this.state.editorCode,
                 directory: false,
             },
-            {headers: headers},
+            {headers: this.getHeadersDict()},
         )
         .then(response => {
             this.setState({
