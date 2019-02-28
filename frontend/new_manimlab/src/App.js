@@ -84,7 +84,17 @@ class App extends React.Component {
 
     handleFileRename(e, data, target) {
         e.stopPropagation();
-        console.log(data.action + ' ' + target.children[0].id);
+        let filesCopy = _.cloneDeep(this.state.editorFiles);
+        let filePath = target.children[0].id;
+        let pathList = filePath.split('/');
+        let renameNode = this.getNodeFromPathList(
+            filesCopy,
+            pathList,
+        );
+        renameNode.untitled = true;
+        this.setState({
+            editorFiles: filesCopy,
+        });
     }
 
     handleFileDelete(e, data, target) {
@@ -101,7 +111,7 @@ class App extends React.Component {
                 name: filePath,
                 directory: 'children' in delNode ? 1 : 0,
             },
-            headers: this.getHeadersDict(),
+            headers: this.getHeadersDict(this.props.access),
         })
         .then(response => {
             let filesCopy = _.cloneDeep(this.state.editorFiles);
@@ -139,8 +149,8 @@ class App extends React.Component {
         });
     }
 
-    getHeadersDict() {
-        return this.props.access.length !== 0 ?
+    getHeadersDict(accessToken) {
+        return accessToken.length !== 0 ?
             {'Authorization': 'Bearer ' + this.props.access} :
             {};
     }
@@ -170,18 +180,41 @@ class App extends React.Component {
             this.setState({editorFiles: filesCopy});
             return;
         }
+        let data;
         let pathList = utils.getNodePathList(node);
-        pathList[pathList.length - 1] = name;
-        axios.post(
-            consts.SAVE_URL,
-            {
+        if (pathList[pathList.length - 1] === undefined) {
+            pathList[pathList.length - 1] = name;
+            data = {
                 // TODO: this should maybe be a path list
                 // (if you want to REALLY enforce separation)
                 name: pathList.join('/'),
                 project: this.state.project,
-                directory: "children" in node,
-            },
-            {headers: this.getHeadersDict()},
+                code: "",
+            };
+        } else {
+            let newNamePathList = _.cloneDeep(pathList);
+            newNamePathList[newNamePathList.length - 1] = name;
+            console.log(name);
+            console.log(newNamePathList);
+            data = {
+                // TODO: this should maybe be a path list
+                // (if you want to REALLY enforce separation)
+                name: pathList.join('/'),
+                project: this.state.project,
+                // TODO: join the path from pathList
+                newName: newNamePathList.join('/'),
+            };
+        }
+        if ("children" in node) {
+            data['directory'] = true;
+        } else {
+            data['directory'] = false;
+        }
+        console.log(data);
+        axios.post(
+            consts.SAVE_URL,
+            data,
+            {headers: this.getHeadersDict(this.props.access)},
         )
         .then(response => {
             nodeCopy['untitled'] = false;
@@ -226,7 +259,22 @@ class App extends React.Component {
             } else {
                 nodeCopy.directory.children = libraryDirs.concat(fileArray);
             }
-            this.setState({editorFiles: filesCopy});
+            let newFilename = this.state.editorFilename;
+            let newCursor = this.state.editorCursor;
+            if (!_.isEmpty(this.state.editorCursor)) {
+                let cursorMaybe = this.getNodeFromPathList(
+                    filesCopy,
+                    utils.getNodePathList(this.state.editorCursor));
+                if (this.state.editorCursor.name !== cursorMaybe.name) {
+                    newFilename = utils.getNodePathList(nodeCopy).join('/');
+                    newCursor = nodeCopy;
+                }
+            }
+            this.setState({
+                editorFiles: filesCopy,
+                editorFilename: newFilename,
+                editorCursor: newCursor,
+            });
         })
         .catch(error => {
             if (siblingList.length === 1) {
@@ -259,11 +307,11 @@ class App extends React.Component {
             filesCopy, utils.getNodePathList(node));
         let oldCursorCopy = this.getNodeFromPathList(
             filesCopy, utils.getNodePathList(this.state.editorCursor));
-        let newCursorCopy = this.state.editorCursor;;
+        let newCursorCopy = this.state.editorCursor;
 
         if (!("children" in node)) {
             nodeCopy.active = true;
-            if (!_.isEmpty(this.state.editorCursor)) {
+            if (!_.isEmpty(this.state.editorCursor) && this.state.editorCursor !== undefined) {
                 oldCursorCopy.active = false;
             }
             newCursorCopy = nodeCopy;
@@ -357,7 +405,7 @@ class App extends React.Component {
                 project: this.state.project,
                 directory: true,
             },
-            {headers: this.getHeadersDict()},
+            {headers: this.getHeadersDict(accessToken)},
         )
         .then(response => {
             let files = response.data.files.map(obj => {
@@ -425,7 +473,7 @@ class App extends React.Component {
                 project: node.project,
                 pathList: utils.getNodePathList(node),
             },
-            {headers: this.getHeadersDict()},
+            {headers: this.getHeadersDict(this.props.access)},
         )
         .then(response => {
             let displayingLibraryCode;
@@ -485,7 +533,7 @@ class App extends React.Component {
                 project: node.project,
                 pathList: pathList,
             },
-            {headers: this.getHeadersDict()},
+            {headers: this.getHeadersDict(this.props.access)},
         )
         .then(response => {
             let filesCopy = _.cloneDeep(this.state.editorFiles);
@@ -606,7 +654,7 @@ class App extends React.Component {
         axios({
             method: 'post',
             url: consts.RENDER_URL,
-            headers: this.getHeadersDict(),
+            headers: this.getHeadersDict(this.props.access),
             data: {
                 filename: this.state.editorFilenameInput,
                 scene: this.state.editorSceneInput,
@@ -652,7 +700,7 @@ class App extends React.Component {
                 code: this.state.editorCode,
                 directory: false,
             },
-            {headers: this.getHeadersDict()},
+            {headers: this.getHeadersDict(this.props.access)},
         )
         .then(response => {
             this.setState({

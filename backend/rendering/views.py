@@ -11,6 +11,8 @@ from django.contrib.sessions.backends.db import SessionStore
 from django.contrib.sessions.models import Session
 from django.core.files import File
 from django.core.files.base import ContentFile
+from django.db.models import Value
+from django.db.models.functions import Length, Concat, Right
 from django.utils import timezone
 from redis import Redis
 from rest_framework import generics, viewsets, views, mixins
@@ -301,7 +303,10 @@ class Session(generics.RetrieveAPIView):
                     project_source_path,
                     settings.DEFAULT_PROJECT_FILENAME,
                 )
-            response_scene = profile.last_scene
+            if profile.last_scene:
+                response_scene = profile.last_scene
+            else:
+                response_scene = settings.DEFAULT_PROJECT_SCENE
 
         with open(project_file_path) as response_file:
             response_data.update({
@@ -359,11 +364,16 @@ class NewSave(generics.GenericAPIView):
     permission_classes = (IsAuthenticated,)
 
     def post(self, request):
-        if ("name" not in request.data):
-            return Response(
-                {'error': 'request is missing filename'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        for field in ["name", "project"]:
+            if (field not in request.data):
+                return Response(
+                    {'error': f'request is missing {field}'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        # check either:
+        # !directory + at least one of code, name in the request or
+        # directory
 
         try:
             project = Project.objects.get(
@@ -388,30 +398,81 @@ class NewSave(generics.GenericAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        name = newName = request.data['name']
+        if 'newName' in request.data:
+            try:
+                new_path = get_valid_media_path(
+                    project.name,
+                    request.user.username,
+                    request.data['newName'],
+                )
+            except Exception:
+                return Response(
+                    {'error': 'invalid new filename'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            else:
+                newName = request.data['newName']
 
         if request.data['directory']:
-            os.mkdir(os.path.join(settings.MEDIA_ROOT, media_path))
-            return Response(request.data)
+            if 'newName' in request.data:
+                os.rename(
+                    os.path.join(settings.MEDIA_ROOT, media_path),
+                    os.path.join(settings.MEDIA_ROOT, new_path),
+                )
+                Module.objects.filter(source__startswith=media_path).update(
+                    source=Concat(
+                        Value(new_path),
+                        Right(
+                            'source',
+                            Length('source') - len(media_path)
+                        )
+                    )
+                )
+                return Response(request.data)
+            else:
+                os.mkdir(os.path.join(settings.MEDIA_ROOT, media_path))
+                return Response(request.data)
         else:
-            defaults = {
-                'time': timezone.now(),
-                'source': ContentFile(
-                    request.data.get('code', ""),
-                    name=request.data['name'],
-                ),
-            }
-            try:
+            if 'code' in request.data:
+                defaults = {
+                    'time': timezone.now(),
+                    'source': ContentFile(
+                        request.data['code'],
+                        name=newName,
+                    ),
+                }
                 module, created = Module.objects.update_or_create(
                     owner=request.user,
                     project=project,
                     source=media_path,
                     defaults=defaults,
                 )
-            except Exception:
-                return Response(
-                    {'error': 'invalid filename'},
-                    status=status.HTTP_400_BAD_REQUEST,
+            else:
+                module = Module.objects.get(
+                    owner=request.user,
+                    project=project,
+                    source=media_path,
                 )
+                module.source.name = new_path
+                module.save()
+                os.rename(
+                    os.path.join(settings.MEDIA_ROOT, media_path),
+                    os.path.join(settings.MEDIA_ROOT, new_path),
+                )
+
+            # try:
+            #     module, created = Module.objects.update_or_create(
+            #         owner=request.user,
+            #         project=project,
+            #         source=media_path,
+            #         defaults=defaults,
+            #     )
+            # except Exception:
+            #     return Response(
+            #         {'error': 'invalid filename'},
+            #         status=status.HTTP_400_BAD_REQUEST,
+            #     )
 
             profile = Profile.objects.get(user=request.user)
             profile.last_module = module
@@ -616,6 +677,7 @@ class ModuleDelete(generics.DestroyAPIView):
             )
             media_path = os.path.join(settings.MEDIA_ROOT, directory_path)
             shutil.rmtree(media_path)
+            Module.objects.filter(source__startswith=directory_path).delete()
             return Response({'deleted': media_path})
         else:
             return super(ModuleDelete, self).delete(request, *args, **kwargs)
