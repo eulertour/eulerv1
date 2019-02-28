@@ -55,19 +55,19 @@ def render_scene(
     if len(devices) != 2:
         print("some mounts failed")
 
-    # TODO: either cd into user directory or add it to PYTHONPATH
     args = [
             "lxc", "exec", container, "--",
             "docker", "run",
             "-v", "/root/manim:/root/manim",
             "-v", "/root/project:/root/project",
-            "-e", "MEDIA_DIR=project",
-            "-e", "FILE_DIR=project",
+            "-e", "MEDIA_DIR=/root/project",
+            "-e", "FILE_DIR=/root/project",
+            "-e", "PYTHONPATH=/root/manim",
             "eulertour/manim:latest",
-            "-c", "umask 002 && python3 manim/manim.py " +
-                  f"project/source/{shlex.quote(input_filename)} " +
+            "-c", "umask 002 && cd project/source && python3 -m manim " +
+                  f"{shlex.quote(input_filename)} " +
                   f"{shlex.quote(input_scene)} -pl",
-        ]
+    ]
     # print(" ".join(args))
     # breakpoint(context=9)
 

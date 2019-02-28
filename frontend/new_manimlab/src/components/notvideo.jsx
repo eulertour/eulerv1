@@ -11,7 +11,7 @@ class NotVideo extends Component {
 
     getVideoURL(user, project, file, scene) {
         return 'http://eulertour.com:9000/user/' + user + '/projects/' +
-            project + '/videos/project/source/' + file.split('.')[0] + '/480p15/' +
+            project + '/videos/' + file.split('.')[0] + '/480p15/' +
             scene + '.mp4';
     }
 
