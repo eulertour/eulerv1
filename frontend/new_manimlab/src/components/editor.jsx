@@ -97,6 +97,62 @@ class Editor extends Component {
         );
     }
 
+    getRenderButton() {
+        if (this.props.renderStatus === "") {
+            return (
+                <div
+                    className="render-button"
+                    onClick={this.props.onRender}>
+                    <img
+                        className="render-icon"
+                        src={renderIcon}
+                        alt="render"
+                    />
+                    Render Scene
+                </div>
+            );
+        } else if (this.props.renderStatus === "request-sent") {
+            return (
+                <div
+                    className="render-button"
+                    onClick={this.props.onRenderCanceled}>
+                    <img
+                        className="render-icon"
+                        src={renderIcon}
+                        alt="render"
+                    />
+                    Request Sent...
+                </div>
+            );
+        } else if (this.props.renderStatus === "queued") {
+            return (
+                <div
+                    className="render-button"
+                    onClick={this.props.onRenderCanceled}>
+                    <img
+                        className="render-icon"
+                        src={renderIcon}
+                        alt="render"
+                    />
+                    Queued...
+                </div>
+            );
+        } else if (this.props.renderStatus === "started") {
+            return (
+                <div
+                    className="render-button"
+                    onClick={this.props.onRenderCanceled}>
+                    <img
+                        className="render-icon"
+                        src={renderIcon}
+                        alt="render"
+                    />
+                    Rendering...
+                </div>
+            );
+        }
+    }
+
     render() {
         return (
             <div className="manim-input">
@@ -159,16 +215,7 @@ class Editor extends Component {
                             value={this.props.sceneInput}
                             onChange={this.props.onInputSceneChange}
                         />
-                        <div
-                            className="render-button"
-                            onClick={this.props.onRender}>
-                            <img
-                                className="render-icon"
-                                src={renderIcon}
-                                alt="render"
-                            />
-                            Render Scene
-                        </div>
+                        {this.getRenderButton()}
                     </div>
                 </div>
             </div>

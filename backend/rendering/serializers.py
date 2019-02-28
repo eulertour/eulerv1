@@ -133,22 +133,10 @@ class ProjectSerializer(serializers.ModelSerializer):
             settings.PROJECT_DIR,
             name,
         )
-        source_path = os.path.join(
-            project_path,
-            settings.SOURCE_DIR,
-        )
-        video_path = os.path.join(
-            project_path,
-            settings.VIDEO_DIR,
-        )
-        files_path = os.path.join(
-            project_path,
-            settings.FILES_DIR,
-        )
-        designs_path = os.path.join(
-            project_path,
-            settings.DESIGNS_DIR,
-        )
+        source_path = os.path.join(project_path, settings.SOURCE_DIR)
+        video_path = os.path.join(project_path, settings.VIDEO_DIR)
+        files_path = os.path.join(project_path, settings.FILES_DIR)
+        designs_path = os.path.join(project_path, settings.DESIGNS_DIR)
         try:
             os.makedirs(source_path)
             os.makedirs(video_path)

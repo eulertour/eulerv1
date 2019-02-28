@@ -563,7 +563,7 @@ class Render(NewSave):
         input_filename = settings.DEFAULT_PROJECT_FILENAME
         input_scene = request.data["scene"]
         if input_scene is None:
-            return response
+            return Response({'info': 'no scene specified'})
 
         # enqueue the job
         manim_path = os.path.join(
@@ -613,7 +613,7 @@ class CheckRenderJob(generics.GenericAPIView):
                 response_data['filename'] = job.args[0]
             return Response(response_data)
         else:
-            return Response({'error': 'no job'})
+            return Response({'status': 'unknown scene'})
 
 # TODO: use a RUD view for this
 class ModuleViewSet(viewsets.ModelViewSet):

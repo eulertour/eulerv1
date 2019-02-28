@@ -32,6 +32,7 @@ class App extends React.Component {
             editorReadOnly: true,
             editorSaveMessage: "",
             editorSceneInput: "",
+            editorRenderStatus: "",
 
             videoError: consts.DEFAULT_LOGS,
             videoFile: "",
@@ -57,6 +58,7 @@ class App extends React.Component {
         this.handleNewFile = this.handleNewFile.bind(this);
         this.handleNewFileName = this.handleNewFileName.bind(this);
         this.handleRender = this.handleRender.bind(this);
+        this.handleRenderCanceled = this.handleRenderCanceled.bind(this);
         this.handleRenderFinished = this.handleRenderFinished.bind(this);
         this.handleSave = this.handleSave.bind(this);
         this.handleSceneChange = this.handleSceneChange.bind(this);
@@ -301,6 +303,7 @@ class App extends React.Component {
         if (node.untitled || (!('children' in node) && node.empty)) {
             return;
         }
+        // TODO: only if file changed
         clearInterval(this.state.autosaveTimer);
         let filesCopy = _.cloneDeep(this.state.editorFiles);
         let nodeCopy = this.getNodeFromPathList(
@@ -604,6 +607,8 @@ class App extends React.Component {
             // a hack to get the video component to reload
             this.setState({videoScene: ''});
             this.setState({
+                editorRenderStatus: "",
+                renderTimer: -1,
                 videoError: responseData.result['stderr'],
                 videoReturncode: 0,
                 videoScene: responseData['scene'],
@@ -619,6 +624,8 @@ class App extends React.Component {
                 error = responseData.result['error'];
             }
             this.setState({
+                editorRenderStatus: "",
+                renderTimer: -1,
                 videoError: error,
                 videoReturncode: responseData.result['returncode'] || -1,
                 videoScene: responseData['scene'] || '',
@@ -626,18 +633,35 @@ class App extends React.Component {
         }
     }
 
+    handleRenderCanceled() {
+        // TODO: cancel remote job
+        clearInterval(this.state.renderTimer);
+        this.setState({
+            renderTimer: -1,
+            editorRenderStatus: "",
+        });
+    }
+
     checkRender(job_id) {
         axios.get(consts.CHECK_RENDER_URL, {
-            params: {
-                'job_id': job_id,
-            }
+            params: {'job_id': job_id}
         })
         .then(response => {
             if ('status' in response.data) {
                 let renderStatus = response.data['status'];
+                if (renderStatus === 'unknown job') {
+                    renderStatus = this.state.editorRenderStatus;
+                }
                 if (renderStatus === 'finished') {
-                    clearInterval(this.state['renderTimer']);
                     this.handleRenderFinished(response.data);
+                } else {
+                    this.setState({
+                        editorRenderStatus: renderStatus,
+                        renderTimer: setTimeout(
+                            () => {this.checkRender(job_id)},
+                            consts.CHECK_RENDER_INTERVAL_MS,
+                        )
+                    });
                 }
             }
         })
@@ -649,7 +673,6 @@ class App extends React.Component {
         });
     }
 
-    // TODO: rendering points to the wrong file
     handleRender() {
         axios({
             method: 'post',
@@ -662,19 +685,9 @@ class App extends React.Component {
             }
         })
         .then(response => {
-            if ('authorization' in response.headers) {
-                this.props.onSignUp(response.headers['authorization']);
-                return;
-            }
             if ('job_id' in response.data) {
-                clearInterval(this.state['renderTimer']);
-                let checkRenderTimer = setInterval(
-                    () => {this.checkRender(response.data['job_id'])},
-                    consts.CHECK_RENDER_INTERVAL_MS,
-                );
-                this.setState({
-                    renderTimer: checkRenderTimer,
-                });
+                this.setState({editorRenderStatus: "request-sent"})
+                this.checkRender(response.data['job_id']);
             }
         })
         .catch(error => {
@@ -833,6 +846,7 @@ class App extends React.Component {
                         filenameInput={this.state.editorFilenameInput}
                         files={this.state.editorFiles}
                         readOnly={this.state.displayingLibraryCode || this.props.access.length === 0}
+                        renderStatus={this.state.editorRenderStatus}
                         saveMessage={this.state.editorSaveMessage}
                         sceneInput={this.state.editorSceneInput}
 
@@ -847,6 +861,7 @@ class App extends React.Component {
                         onNewFile={this.handleNewFile}
                         onNewFileName={this.handleNewFileName}
                         onRender={this.handleRender} 
+                        onRenderCanceled={this.handleRenderCanceled}
                         onSave={this.handleSave}
                         onSceneChange={this.handleSceneChange}
                         onSetAutosaveTimeout={this.handleSetAutosaveTimeout}
