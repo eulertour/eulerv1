@@ -2,9 +2,12 @@ import React, { Component } from 'react';
 import {Controlled as CodeMirror} from 'react-codemirror2';
 import renderIcon from '../assets/icon-render@3x.svg';
 import saveIcon from '../assets/icon-save@3x.svg';
-import settingsIcon from '../assets/icon-settings@3x.svg';
+// import settingsIcon from '../assets/icon-settings@3x.svg';
 import TreeExample from '../components/tree.jsx';
 import collapseTreeIcon from '../assets/icon-left@3x.svg';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { library } from '@fortawesome/fontawesome-svg-core'
+import { faEraser } from '@fortawesome/free-solid-svg-icons'
 require('codemirror/lib/codemirror.css');
 require('codemirror/theme/material.css');
 require('codemirror/theme/neat.css');
@@ -13,6 +16,7 @@ require('codemirror/mode/python/python.js');
 require('codemirror/addon/scroll/simplescrollbars.js');
 require('codemirror/addon/scroll/simplescrollbars.css');
 
+library.add(faEraser);
 
 class Editor extends Component {
     state = {
@@ -76,11 +80,11 @@ class Editor extends Component {
                 onClick={this.props.onSave}
             />
         );
-        let settingsButton = (
-            <img
-                className="file-banner-button"
-                src={settingsIcon}
-                alt="settings"
+        let projectEraseButton = (
+            <FontAwesomeIcon
+                className="file-banner-button eraser"
+                icon={["fas", "eraser"]}
+                onClick={this.props.onProjectReset}
             />
         );
         return (
@@ -91,7 +95,7 @@ class Editor extends Component {
                         {this.props.saveMessage}
                     </div>
                     {saveButton}
-                    {settingsButton}
+                    {projectEraseButton}
                 </div>
             </div>
         );

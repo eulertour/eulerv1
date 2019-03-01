@@ -643,13 +643,64 @@ class ModuleViewSet(viewsets.ModelViewSet):
         response = super().create(request) # overridden with update_or_create()
         return response
 
+class ProjectDelete(generics.DestroyAPIView):
+    authentication_classes = (JWTAuthentication,)
+    permission_classes = (IsAuthenticated, IsOwner)
+
+    def get_queryset(self):
+        return Project.objects.filter(owner=self.request.user)
+
+    def get_object(self):
+        project_name = self.request.query_params['project']
+        user = self.request.user
+        return Project.objects.get(owner=user, name=project_name)
+
+    def delete(self, request, *args, **kwargs):
+        project = self.get_object()
+
+        # delete the modules
+        Module.objects.filter(project=project).delete()
+
+        # delete the project
+        project.delete()
+
+        # create new project because users currently must have a project
+        project_serializer = ProjectSerializer(data={
+            'name': settings.DEFAULT_PROJECT,
+            'owner': request.user.pk,
+        })
+        project_serializer.is_valid(raise_exception=True)
+        new_project = project_serializer.save(
+            base_project=settings.DEFAULT_PROJECT)
+
+        # add files for new project to response
+        response_data = {}
+        project_source_path = os.path.join(
+            new_project.get_path(),
+            settings.SOURCE_DIR,
+        )
+        project_file_path = os.path.join(
+            project_source_path,
+            settings.DEFAULT_PROJECT_FILENAME,
+        )
+        with open(project_file_path) as response_file:
+            response_data.update({
+                'filename': os.path.relpath(project_file_path, project_source_path),
+                'code': response_file.read(),
+                'scene': settings.DEFAULT_PROJECT_SCENE,
+                'files': [LIBRARY_DIR_ENTRY] +
+                         list_directory_contents(project_source_path, new_project.name),
+                'project': new_project.name,
+            })
+        return Response(response_data)
+
 class ModuleDelete(generics.DestroyAPIView):
     authentication_classes = (JWTAuthentication,)
     permission_classes = (IsAuthenticated, IsOwner)
     serializer_class = SaveModuleSerializer
 
     def get_queryset(self):
-        return Module.objects.filter(soure=self.request.user)
+        return Module.objects.filter(owner=self.request.user)
 
     def get_object(self):
         project_name = self.request.query_params['project']
@@ -660,11 +711,6 @@ class ModuleDelete(generics.DestroyAPIView):
             project=Project.objects.get(
                 owner=user,
                 name=project_name
-            ),
-            source=get_valid_media_path(
-                project_name,
-                user.username,
-                source_path,
             ),
         )
     

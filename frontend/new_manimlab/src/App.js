@@ -44,6 +44,7 @@ class App extends React.Component {
             renderTimer: -1,
             showFileMoveModal: false,
             showLoginModal: false,
+            showProjectResetModal: false,
         }
         this.fetchDirectoryContents = this.fetchDirectoryContents.bind(this);
         this.fetchFileContents = this.fetchFileContents.bind(this);
@@ -63,9 +64,49 @@ class App extends React.Component {
         this.handleSave = this.handleSave.bind(this);
         this.handleSceneChange = this.handleSceneChange.bind(this);
         this.handleSetAutosaveTimeout=this.handleSetAutosaveTimeout.bind(this);
+        this.handleProjectReset=this.handleProjectReset.bind(this);
         this.handleToggle = this.handleToggle.bind(this);
         this.logOut = this.logOut.bind(this);
         this.restoreSession = this.restoreSession.bind(this);
+        this.resetProject = this.resetProject.bind(this);
+    }
+
+    handleProjectReset() {
+        this.setState({showProjectResetModal: true});
+    }
+
+    resetProject() {
+        axios.delete(consts.PROJECT_DELETE_URL, {
+            params: {project: this.state.project},
+            headers: this.getHeadersDict(this.props.access),
+        })
+        .then(response => {
+            let files = response.data.files.map(obj => {
+                if (obj.directory) {
+                    delete obj.directory;
+                    obj['children'] = [];
+                    obj['loading'] = true;
+                } else {
+                    delete obj.directory;
+                }
+                if (obj['library']) {
+                    obj['readOnly'] = true;
+                }
+                return obj;
+            });
+            this.setState({
+                editorCode: response.data.code,
+                editorFilename: response.data.filename,
+                editorFilenameInput: response.data.filename,
+                editorFiles: files,
+                editorSceneInput: response.data.scene,
+                project: response.data.project,
+                videoScene: response.data.scene,
+            });
+        })
+        .catch(error => {
+
+        });
     }
 
     handleAnimationComplete() {
@@ -212,7 +253,6 @@ class App extends React.Component {
         } else {
             data['directory'] = false;
         }
-        console.log(data);
         axios.post(
             consts.SAVE_URL,
             data,
@@ -461,6 +501,7 @@ class App extends React.Component {
             this.setState({
                 showLoginModal: false,
                 showFileMoveModal: false,
+                showProjectResetModal: false,
             });
         }
     }
@@ -786,31 +827,67 @@ class App extends React.Component {
                 </div>
             )
         }
-        let loginModal;
-        if (this.state.showLoginModal) {
-		    loginModal = (
-                <div
-                    className="modal-background"
+        let loginModal = this.state.showLoginModal ?
+            <div
+                className="modal-background"
+                closeonclick="true"
+                onClick={this.handleModalClick}
+            >
+                <img
+                    className="close-icon"
+                    src={closeIcon}
+                    alt="close"
                     closeonclick="true"
-                    onClick={this.handleModalClick}
-                >
-                    <img
-                        className="close-icon"
-                        src={closeIcon}
-                        alt="close"
-                        closeonclick="true"
-                    />
-                    <Login
-                        controlUrl={false}
-                        onAuth={(response) => {
-                            this.setState({showLoginModal: false});
-                            this.props.onAuth(response);
-                            this.restoreSession(this.props.access);
-                        }}
-                    />
+                />
+                <Login
+                    controlUrl={false}
+                    onAuth={(response) => {
+                        this.setState({showLoginModal: false});
+                        this.props.onAuth(response);
+                        this.restoreSession(this.props.access);
+                    }}
+                />
+            </div> : null;
+        let resetModal = this.state.showProjectResetModal ?
+            <div
+                className="modal-background"
+                closeonclick="true"
+                onClick={this.handleModalClick}
+            >
+                <img
+                    className="close-icon"
+                    src={closeIcon}
+                    alt="close"
+                    closeonclick="true"
+                />
+                <div className="reset-modal">
+                    <div className="reset-confirmation-container">
+                        <div className="reset-confirmation">
+                            Are you sure you want to reset
+                            to the original project?
+                        </div>
+                    </div>
+                    <div className="reset-buttons">
+                        <div
+                            className="banner-button danger-button"
+                            onClick={() => {
+                                this.setState({showProjectResetModal: false});
+                                this.resetProject();
+                            }}
+                        >
+                            Reset Project
+                        </div>
+                        <div
+                            className="banner-button emphatic-button"
+                            onClick={() => {
+                                this.setState({showProjectResetModal: false});
+                            }}
+                        >
+                            Go Back
+                        </div>
+                    </div>
                 </div>
-            );
-        }
+            </div> : null;
         return (
             <div className="page-container">
                 <div className="header">
@@ -866,9 +943,11 @@ class App extends React.Component {
                         onSceneChange={this.handleSceneChange}
                         onSetAutosaveTimeout={this.handleSetAutosaveTimeout}
                         onToggle={this.handleToggle}
+                        onProjectReset={this.handleProjectReset}
                     />
                 </div>
                 {loginModal}
+                {resetModal}
             </div>
         );
     }

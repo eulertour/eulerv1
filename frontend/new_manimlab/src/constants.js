@@ -16,6 +16,7 @@ export const AUTOSAVE_TIMEOUT_MS = 5 * 1000;
 export const FILE_MENU = 'menu_for_files';
 export const DIR_MENU = 'menu_for_directories';
 
+export const PROJECT_DELETE_URL = 'http://eulertour.com:8000/api/project/';
 export const MODULE_DELETE_URL = 'http://eulertour.com:8000/api/module/';
 export const TREE_URL = 'http://eulertour.com:8000/api/tree/';
 

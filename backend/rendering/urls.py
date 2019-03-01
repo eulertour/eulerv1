@@ -16,6 +16,7 @@ urlpatterns = [
     path('session/', views.Session.as_view()),
 
     path('module/', views.ModuleDelete.as_view()),
+    path('project/', views.ProjectDelete.as_view()),
     path('tree/', views.DirectoryTree.as_view()),
 
     path('profilefromsession/', views.ProfileFromSession.as_view()),

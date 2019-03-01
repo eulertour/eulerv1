@@ -22,16 +22,17 @@ class Project(models.Model):
     )
     name = models.CharField(max_length=100)
 
-    def delete(self):
-        project_path = os.path.join(
+    def get_path(self):
+        return os.path.join(
             settings.MEDIA_ROOT,
             settings.USER_MEDIA_DIR,
             self.owner.username,
             settings.PROJECT_DIR,
             self.name,
         )
-        breakpoint(context=9)
-        shutil.rmtree(project_path)
+
+    def delete(self):
+        shutil.rmtree(self.get_path())
         super(Project, self).delete()
 
     class Meta:
