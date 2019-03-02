@@ -126,10 +126,31 @@ class SignUp(generics.GenericAPIView):
     def post(self, request):
         # assert(request has no jwt)
 
+        errors = []
+        if not request.data.get('username'):
+            errors.append('username cannot be empty')
+        if not request.data.get('email'):
+            errors.append('email cannot be empty')
+        if not request.data.get('password'):
+            errors.append('password cannot be empty')
+        elif len(request.data['password']) < 8:
+            errors.append('password must be at least 8 characters long')
+        if errors:
+            return Response(
+                {'info': errors},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         # create the user
         # TODO: catch username already exists
         user_serializer = UserSerializer(data=request.data)
-        user_serializer.is_valid(raise_exception=True)
+        try:
+            user_serializer.is_valid(raise_exception=True)
+        except Exception as e:
+            return Response(
+                {'info': list(e.detail.values())},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         new_user = user_serializer.save()
 
         # create the project
@@ -167,6 +188,18 @@ class LogIn(views.APIView):
     def post(self, request):
         username = request.data['username']
         password = request.data['password']
+
+        errors = []
+        if not username:
+            errors.append('username cannot be empty')
+        if not password:
+            errors.append('password cannot be empty')
+        if errors:
+            return Response(
+                {'info': errors},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         user = authenticate(
             request,
             username=username,
@@ -174,7 +207,9 @@ class LogIn(views.APIView):
         )
         if user is None:
             return Response(
-                { 'info': 'Invalid credentials' })
+                {'info': ['Invalid login credentials']},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         serializer = TokenObtainPairSerializer(data=request.data)
 
         try:

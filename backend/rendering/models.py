@@ -31,6 +31,9 @@ class Project(models.Model):
             self.name,
         )
 
+    def get_source_path(self):
+        return os.path.join(self.get_path(), settings.SOURCE_DIR)
+
     def delete(self):
         shutil.rmtree(self.get_path())
         super(Project, self).delete()
@@ -79,6 +82,12 @@ class Module(models.Model):
             instance.project.name,
             instance.owner.username,
             filename,
+        )
+
+    def short_path(self):
+        return os.path.relpath(
+            os.path.join(settings.MEDIA_ROOT, self.source.name),
+            self.project.get_source_path(),
         )
 
     def delete(self):

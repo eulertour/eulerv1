@@ -31,7 +31,14 @@ class Login extends React.Component {
     componentDidUpdate(prevProps) {
         if (this.props.controlUrl && this.props.location !== prevProps.location) {
             this.setState({
-                display_login: this.props.location.pathname === "/login"
+                display_login: this.props.location.pathname === "/login",
+                login_errors: [],
+                login_username: '',
+                login_password: '',
+
+                signup_username: '',
+                signup_password: '',
+                signup_email: '',
             });
         }
     }
@@ -40,7 +47,16 @@ class Login extends React.Component {
         if (this.props.controlUrl) {
             this.props.history.push(this.state.display_login ? "/signup" : "/login");
         } else {
-            this.setState({display_login : !this.state.display_login});
+            this.setState({
+                display_login : !this.state.display_login,
+                login_errors: [],
+                login_username: '',
+                login_password: '',
+
+                signup_username: '',
+                signup_password: '',
+                signup_email: '',
+            });
         }
     }
 
@@ -56,16 +72,11 @@ class Login extends React.Component {
             this.props.onAuth(response);
         })
         .catch(error => {
-            console.log(error.data);
-            this.setState({
-                login_errors: ['oops'],
-            });
-            if (error.response) {
-                console.log(error.response.data);
-            } else if (error.request) {
-                console.log('Server failed to respond');
-            } else {
-                console.log('Failed to create request:', error.message);
+            if ('response' in error &&
+                'info' in error.response.data) {
+                this.setState({
+                    login_errors: error.response.data.info,
+                });
             }
         });
     }
@@ -84,8 +95,9 @@ class Login extends React.Component {
             this.props.onAuth(response);
         })
         .catch(error => {
-            console.log(error.response);
-            console.log(error);
+            this.setState({
+                login_errors: error.response.data.info
+            });
         });
     }
 
@@ -99,12 +111,12 @@ class Login extends React.Component {
         );
     }
 
-    loginInput(icon, stateVar) {
+    loginInput(icon, stateVar, extraClasses) {
         let inputType = stateVar.split("_")[1];
         let placeholder = inputType.charAt(0).toUpperCase() + inputType.slice(1);
         return (
             <div
-                className="login-input-container"
+                className={"login-input-container " + (extraClasses === undefined ? "" : extraClasses)}
                 key={stateVar}
             >
                 <div className="icon-container">
@@ -133,7 +145,7 @@ class Login extends React.Component {
         if (this.state.display_login) {
             content = [
                 this.loginInput(userIcon, "login_username"),
-                this.loginInput(passwordIcon, "login_password"),
+                this.loginInput(passwordIcon, "login_password", "login-last"),
                 this.rememberForgot(),
             ];
             acceptText = "Log In";
@@ -143,7 +155,7 @@ class Login extends React.Component {
             content = [
                 this.loginInput(userIcon, "signup_username"),
                 this.loginInput(emailIcon, "signup_email"),
-                this.loginInput(passwordIcon, "signup_password"),
+                this.loginInput(passwordIcon, "signup_password", "login-last"),
             ];
             acceptText = "Sign Up";
             acceptFunction = this.signUp;
@@ -159,25 +171,29 @@ class Login extends React.Component {
                     />
                     <div className="login-text">EulerTour</div>
                     {content}
+                    <ul className="auth-errors">
+                        {this.state.login_errors.map((item, i) =>
+                            <li className="auth-error" key={i}>
+                                <div className="auth-error-text">
+                                    {item}
+                                </div>
+                            </li>
+                        )}
+                    </ul>
+                </div>
+                <div className="login-bottom">
                     <div
                         className="emphatic-button signup-button"
                         onClick={acceptFunction}
-                    >
-                        {acceptText}
-                    </div>
-                </div>
-                <div
-                    className="login-bottom"
-                    onClick={this.handleSwitch}
-                >
-                    {switchText}
+                    >{acceptText}</div>
+                    <div
+                        className="login-switch"
+                        onClick={this.handleSwitch}
+                    >{switchText}</div>
                 </div>
             </div>
         );
     }
-    // <ul>
-    //     {this.state.login_errors.map((item, i) => <li key={i}>{item}</li>)}
-    // </ul>
 }
 
 export default withRouter(withCookies(Login));
