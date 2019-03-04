@@ -14,6 +14,7 @@ urlpatterns = [
     path('token/', jwt_views.TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', jwt_views.TokenRefreshView.as_view(), name='token_refresh'),
     path('session/', views.Session.as_view()),
+    path('video/', views.VideoAuth.as_view()),
 
     path('module/', views.ModuleDelete.as_view()),
     path('project/', views.ProjectDelete.as_view()),
@@ -26,7 +27,6 @@ urlpatterns = [
     path('profiles/', views.ProfileList.as_view()),
     path('files/', views.Files.as_view()),
     path('projects/', views.ProjectList.as_view()),
-    path('hello/', views.HelloView.as_view(), name='hello'),
 ]
 
 router = DefaultRouter()

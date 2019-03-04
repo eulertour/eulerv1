@@ -23,13 +23,21 @@ from rest_framework.mixins import CreateModelMixin
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenVerifySerializer
 from rest_framework_simplejwt.tokens import AccessToken
 from rq import Queue
 
 from rendering.permissions import IsOwner
 from manimlab_api import settings
-from .models import Module, Profile, Project, get_valid_media_path
+from .models import (
+    Module,
+    Profile,
+    Project,
+    get_valid_media_path,
+    is_shared_media_path,
+    is_user_path,
+)
 from .serializers import (
     UserSerializer, 
     SaveModuleSerializer, 
@@ -58,6 +66,23 @@ def custom_exception_handler(exc, context):
             return Response(response.data)
 
     return response
+
+class VideoAuth(generics.GenericAPIView):
+    authentication_classes = (JWTAuthentication,)
+    permission_classes = ()
+
+    def get(self, request):
+        media_path = request.META.get('HTTP_X_ORIGINAL_URI')
+        if not media_path:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        if is_shared_media_path(media_path):
+            return Response(status=status.HTTP_200_OK)
+        if request.user.is_anonymous:
+            return Response(status=status.HTTP_403_FORBIDDEN)
+        if is_user_path(media_path, request.user.username):
+            return Response(status=status.HTTP_200_OK)
+        return Response(status=status.HTTP_403_FORBIDDEN)
+
 
 class UserDetail(generics.RetrieveAPIView):
     authentication_classes = ()
@@ -88,19 +113,6 @@ class ProfileCreate(generics.CreateAPIView):
     permission_classes = ()
     queryset = Profile.objects.all()
     serializer_class = ProfileSerializer
-
-class HelloView(views.APIView):
-    authentication_classes = (SessionAuthentication,)
-    permission_classes = (IsAuthenticated,)
-    def get(self, request):
-        content = {'message': 'Hello, World!'}
-        return Response(content)
-
-    def post(self, request):
-        x = request.data
-        # content = {'message': request.data['a']}
-        content = {'message': '???'}
-        return Response(content)
 
 def get_auth_info(request):
     auth = request.META.get('HTTP_AUTHORIZATION', None)
@@ -595,7 +607,7 @@ class Render(NewSave):
     permission_classes = (IsAuthenticated,)
 
     def post(self, request):
-        input_filename = settings.DEFAULT_PROJECT_FILENAME
+        input_filename = request.data["filename"]
         input_scene = request.data["scene"]
         if input_scene is None:
             return Response({'info': 'no scene specified'})
@@ -740,13 +752,16 @@ class ModuleDelete(generics.DestroyAPIView):
     def get_object(self):
         project_name = self.request.query_params['project']
         user = self.request.user
-        source_path = self.request.query_params['name']
+        project = Project.objects.get(owner=user, name=project_name)
+        file_path = self.request.query_params['name']
+        file_path = os.path.relpath(
+            os.path.join(project.get_source_path(), file_path),
+            settings.MEDIA_ROOT,
+        )
         return Module.objects.get(
             owner=user,
-            project=Project.objects.get(
-                owner=user,
-                name=project_name
-            ),
+            project=project,
+            source=file_path,
         )
     
     def delete(self, request, *args, **kwargs):

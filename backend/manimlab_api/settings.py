@@ -103,15 +103,18 @@ SIMPLE_JWT = {
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-        # for the browsable api
-        'rest_framework.authentication.SessionAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
+    'DEFAULT_RENDERER_CLASSES': (
+        'rest_framework.renderers.JSONRenderer',
+    )
 }
 
 CORS_ORIGIN_WHITELIST = (
+    'www.eulertour.com',
+    'eulertour.com',
     'eulertour.com:3000',
     'http://eulertour.com:3000',
     'http://eulertour.com:3000/',
@@ -165,8 +168,12 @@ WSGI_APPLICATION = 'manimlab_api.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'eulertour',
+        'USER': 'etrdatabase',
+        'PASSWORD': 'dbpass',
+        'HOST': 'localhost',
+        'PORT': '',
     }
 }
 

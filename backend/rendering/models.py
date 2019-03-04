@@ -41,6 +41,28 @@ class Project(models.Model):
     class Meta:
         unique_together = ('owner', 'name')
 
+def in_directory(path, directory, allow_symlink=False):
+    # make both absolute
+    directory = os.path.abspath(directory)
+    path = os.path.abspath(path)
+
+    #check whether path is a symbolic link, if yes, return false if they are not allowed
+    if not allow_symlink and os.path.islink(path):
+        return False
+
+    #return true, if the common prefix of both is equal to directory
+    #e.g. /a/b/c/d.rst and directory is /a/b, the common prefix is /a/b
+    return os.path.commonprefix([path, directory]) == directory
+
+def is_shared_media_path(path):
+    return in_directory(path, os.sep + settings.SHARED_MEDIA_DIR)
+
+def is_user_path(path, username):
+    return in_directory(
+        path,
+        os.path.join(os.sep + settings.USER_MEDIA_DIR, username)
+    )
+
 def get_valid_media_path(project_name, username, filename):
     user_directory = os.path.normpath(os.path.join(
         settings.USER_MEDIA_DIR,
