@@ -16,8 +16,9 @@ from corsheaders.defaults import default_headers
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+STATIC_ROOT = os.path.join(BASE_DIR, 'static/')
 
-MEDIA_ROOT = 'data/'
+MEDIA_ROOT = '/srv/data/'
 SHARED_MEDIA_DIR = 'shared/'
 USER_MEDIA_DIR = 'user/'
 PROJECT_DIR = 'projects/'
@@ -35,19 +36,84 @@ DEFAULT_PROJECT_FILENAME = 'example_scenes.py'
 DEFAULT_PROJECT_SCENE = 'SquareToCircle'
 
 RENDER_GROUP = 'etr-render'
+# LOGGING = {
+#     'version': 1,
+#     'disable_existing_loggers': False,
+#     'handlers': {
+#         'file': {
+#             'level': 'DEBUG',
+#             'class': 'logging.FileHandler',
+#             'filename': '/home/devneal/eulertour/backend/manimlab_api/debug.log',
+#         },
+#     },
+#     'loggers': {
+#         'django': {
+#             'handlers': ['file'],
+#             'level': 'DEBUG',
+#             'propagate': True,
+#         },
+#     },
+# }
+LOGGING_CONFIG = None
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': True,
+    'formatters': {
+        'django.server': {
+            '()': 'django.utils.log.ServerFormatter',
+            'format': '[{server_time}] {message}',
+            'style': '{',
+        }
+    },
+    'handlers': {
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': 'manimlab_api/debug.log',
+            'formatter': 'django.server',
+        },
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'django.server',
+        },
+        'mail_admins': {
+            'level': 'ERROR',
+            'class': 'django.utils.log.AdminEmailHandler'
+        }
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file', 'mail_admins'],
+            'level': 'INFO',
+        },
+        'django.request': {
+            'handlers': ['file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    }
+}
+
+import logging.config
+logging.config.dictConfig(LOGGING)
+
+DOMAIN = os.getenv('DJANGO_DOMAIN', 'eulertour.com')
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = '@)cdx@%mp7@rj96@^=%^*p+b&l%8rr$y$j0p^1+u0i7)96=g-e'
+# generate with django.core.management.utils.get_random_secret_key()
+SECRET_KEY = os.environ['DJANGO_SECRET_KEY']
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    '.eulertour.com',
+    '.' + DOMAIN,
+    '.nginx',
 ]
 
 # Application definition
@@ -75,6 +141,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'request_logging.middleware.LoggingMiddleware',
 ]
 
 SIMPLE_JWT = {
@@ -102,6 +169,7 @@ SIMPLE_JWT = {
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.SessionAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
@@ -109,24 +177,27 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_RENDERER_CLASSES': (
         'rest_framework.renderers.JSONRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',
     )
 }
 
 CORS_ORIGIN_WHITELIST = (
-    'www.eulertour.com',
-    'eulertour.com',
-    'eulertour.com:3000',
-    'http://eulertour.com:3000',
-    'http://eulertour.com:3000/',
-
-    'eulertour.com:3001',
-    'http://eulertour.com:3001',
-    'http://eulertour.com:3001/',
+    DOMAIN,
+    'www.'+ DOMAIN,
+    'api.' + DOMAIN,
+    DOMAIN + ':3000',
+    DOMAIN + ':3000/',
 )
+CORS_ORIGIN_ALLOW_ALL = True
 
+X_FRAME_OPTIONS = 'DENY'
 SESSION_SAVE_EVERY_REQUEST = True
-SESSION_COOKIE_DOMAIN = 'http://eulertour.com:3000/'
-CSRF_COOKIE_DOMAIN = '*'
+SESSION_COOKIE_DOMAIN = None
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_DOMAIN = '.' + DOMAIN
+CSRF_COOKIE_SECURE = True
+CSRF_TRUSTED_ORIGINS = ['api.' + DOMAIN]
+CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS = (
     'GET',
     'POST',
@@ -139,6 +210,7 @@ CORS_EXPOSE_HEADERS = (
     'Set-Cookie',
     'Content-Length',
     'Authorization',
+    'X-CSRFToken',
     '*',
 )
 
@@ -166,14 +238,20 @@ WSGI_APPLICATION = 'manimlab_api.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/2.1/ref/settings/#databases
 
+if os.getenv('DOCKER_CONTAINER'):
+    POSTGRES_HOST = 'db'
+    REDIS_HOST = 'redis'
+else:
+    POSTGRES_HOST = '127.0.0.1'
+    REDIS_HOST = '127.0.0.1'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'eulertour',
-        'USER': 'etrdatabase',
-        'PASSWORD': 'dbpass',
-        'HOST': 'localhost',
-        'PORT': '',
+        'NAME': 'etrdatabase',
+        'USER': 'postgres',
+        'PASSWORD': 'postgres',
+        'HOST': POSTGRES_HOST,
+        'PORT': '5432',
     }
 }
 

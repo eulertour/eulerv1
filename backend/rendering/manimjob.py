@@ -4,8 +4,6 @@ import os
 import shlex
 import subprocess
 
-from manimlab_api import settings
-
 def render_scene(
         input_filename,
         input_scene,
@@ -17,49 +15,52 @@ def render_scene(
     # TODO: error checking is for squares
     info = {"scene": input_scene}
 
-    ## get container
-    container = "c1"
+    # ## get container
+    # container = "c1"
 
-    # mount manim
-    proc = subprocess.Popen([
-            "lxc", "config", "device", "add", container, "manim", "disk",
-            f"source={manim_path}",
-            "path=/root/manim",
-            "readonly=true",
-        ],
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-    err = proc.stderr.read()
-    if err:
-        print(err)
+    # # mount manim
+    # proc = subprocess.Popen([
+    #         "lxc", "config", "device", "add", container, "manim", "disk",
+    #         f"source={manim_path}",
+    #         "path=/root/manim",
+    #         "readonly=true",
+    #     ],
+    #     stdin=subprocess.PIPE,
+    #     stdout=subprocess.PIPE,
+    #     stderr=subprocess.PIPE,
+    # )
+    # err = proc.stderr.read()
+    # if err:
+    #     print(err)
 
-    # mount project
-    proc = subprocess.Popen([
-            "lxc", "config", "device", "add", container, "project", "disk",
-            f"source={project_path}",
-            "path=/root/project",
-        ],
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-    err = proc.stderr.read()
-    if err:
-        print(err)
+    # # mount project
+    # proc = subprocess.Popen([
+    #         "lxc", "config", "device", "add", container, "project", "disk",
+    #         f"source={project_path}",
+    #         "path=/root/project",
+    #     ],
+    #     stdin=subprocess.PIPE,
+    #     stdout=subprocess.PIPE,
+    #     stderr=subprocess.PIPE,
+    # )
+    # err = proc.stderr.read()
+    # if err:
+    #     print(err)
 
-    devices = subprocess.check_output([
-        "lxc", "config", "device", "list", container
-    ]).split()
-    if len(devices) != 2:
-        print("some mounts failed")
+    # devices = subprocess.check_output([
+    #     "lxc", "config", "device", "list", container
+    # ]).split()
+    # if len(devices) != 2:
+    #     print("some mounts failed")
 
     args = [
-            "lxc", "exec", container, "--",
-            "docker", "run",
-            "-v", "/root/manim:/root/manim",
-            "-v", "/root/project:/root/project",
+            "docker", "run", "--rm",
+            "--cpuset-cpus", "0",
+            "--memory", "500m",
+            "--stop-timeout", "60",
+            "--network", "none",
+            "-v", f"{manim_path}:/root/manim:ro",
+            "-v", f"{project_path}:/root/project",
             "-e", "MEDIA_DIR=/root/project",
             "-e", "FILE_DIR=/root/project",
             "-e", "PYTHONPATH=/root/manim",
@@ -78,15 +79,21 @@ def render_scene(
         stderr=subprocess.PIPE,
     )
     out, err = proc.communicate()
+    out = out.decode("utf-8")
+    err = err.decode("utf-8")
+
+    # remove warning about swap memory
+    if err.startswith('WARNING'):
+        err = '\n'.join(err.split('\n')[1:])
 
     info["returncode"] = proc.returncode
-    info["stderr"] = err.decode("utf-8")
-    info["stdout"] = out.decode("utf-8")
+    info["stderr"] = err
+    info["stdout"] = out
 
-    # unmount user files from container
-    for device in devices:
-        subprocess.run([
-            "lxc", "config", "device", "remove", container, device,
-        ])
+    # # unmount user files from container
+    # for device in devices:
+    #     subprocess.run([
+    #         "lxc", "config", "device", "remove", container, device,
+    #     ])
 
     return info

@@ -4,6 +4,7 @@ import os
 import pwd
 import pytz
 import shutil
+import stat
 
 from django.contrib.auth.models import User
 from django.core.files.base import ContentFile
@@ -132,7 +133,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             owner.username,
             settings.PROJECT_DIR,
             name,
-        )
+        ) + os.sep
         source_path = os.path.join(project_path, settings.SOURCE_DIR)
         video_path = os.path.join(project_path, settings.VIDEO_DIR)
         files_path = os.path.join(project_path, settings.FILES_DIR)
@@ -145,11 +146,16 @@ class ProjectSerializer(serializers.ModelSerializer):
         except:
             pass
         else:
-            shutil.chown(project_path, user=None, group=settings.RENDER_GROUP)
-            shutil.chown(video_path, user=None, group=settings.RENDER_GROUP)
-            shutil.chown(files_path, user=None, group=settings.RENDER_GROUP)
-            shutil.chown(designs_path, user=None, group=settings.RENDER_GROUP)
-            # source should be read-only to the renderer
+            # shutil.chown(project_path, user=None, group=settings.RENDER_GROUP)
+            # shutil.chown(video_path, user=None, group=settings.RENDER_GROUP)
+            # shutil.chown(files_path, user=None, group=settings.RENDER_GROUP)
+            # shutil.chown(designs_path, user=None, group=settings.RENDER_GROUP)
+            # source should remain read-only to the renderer
+
+            # g+w
+            for path in [project_path, video_path, files_path, designs_path]:
+                st = os.stat(path)
+                os.chmod(path, st.st_mode | stat.S_IWGRP)
 
         # create modules
         if 'base_project' in validated_data:

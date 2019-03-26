@@ -19,8 +19,9 @@ from rest_framework.authtoken import views
 import rendering.views
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('admin/', admin.site.urls), # do this better
     path('api/', include('rendering.urls')),
-    path('api-auth/', include('rest_framework.urls')),
-    path('api-token-auth/', views.obtain_auth_token),
+    # path('auth/signup/'),
+    # path('auth/login/'),
+    # path('auth/refresh/'),
 ]

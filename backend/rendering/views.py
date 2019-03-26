@@ -37,6 +37,7 @@ from .models import (
     get_valid_media_path,
     is_shared_media_path,
     is_user_path,
+    in_directory,
 )
 from .serializers import (
     UserSerializer, 
@@ -54,90 +55,51 @@ LIBRARY_DIR_ENTRY = {
     'project': 'manim',
 }
 
-def custom_exception_handler(exc, context):
-    # Call REST framework's default exception handler first,
-    # to get the standard error response.
-    response = views.exception_handler(exc, context)
-
-    # Now add the HTTP status code to the response.
-    if response is not None:
-        response.data['status_code'] = response.status_code
-        if response.status_code == 403:
-            return Response(response.data)
-
-    return response
-
-class VideoAuth(generics.GenericAPIView):
-    authentication_classes = (JWTAuthentication,)
+class LogIn(views.APIView):
     permission_classes = ()
-
-    def get(self, request):
-        media_path = request.META.get('HTTP_X_ORIGINAL_URI')
-        if not media_path:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
-        if is_shared_media_path(media_path):
-            return Response(status=status.HTTP_200_OK)
-        if request.user.is_anonymous:
-            return Response(status=status.HTTP_403_FORBIDDEN)
-        if is_user_path(media_path, request.user.username):
-            return Response(status=status.HTTP_200_OK)
-        return Response(status=status.HTTP_403_FORBIDDEN)
-
-
-class UserDetail(generics.RetrieveAPIView):
     authentication_classes = ()
-    permission_classes = ()
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
 
-class UserList(generics.ListAPIView):
-    authentication_classes = ()
-    permission_classes = ()
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
+    def post(self, request):
+        username = request.data.get('username')
+        password = request.data.get('password')
 
-class UserDelete(generics.DestroyAPIView):
-    authentication_classes = ()
-    permission_classes = ()
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
+        errors = []
+        if not username:
+            errors.append('username cannot be empty')
+        if not password:
+            errors.append('password cannot be empty')
+        if errors:
+            return Response(
+                {'info': errors},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-class UserCreate(generics.CreateAPIView):
-    authentication_classes = ()
-    permission_classes = ()
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
+        user = authenticate(
+            request,
+            username=username,
+            password=password,
+        )
+        if user is None:
+            return Response(
+                {'info': ['Invalid login credentials']},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-class ProfileCreate(generics.CreateAPIView):
-    authentication_classes = ()
-    permission_classes = ()
-    queryset = Profile.objects.all()
-    serializer_class = ProfileSerializer
-
-def get_auth_info(request):
-    auth = request.META.get('HTTP_AUTHORIZATION', None)
-    if not auth:
-        return ('noauth', None)
-
-    session_match = re.match('Session (\w+)', auth)
-    if session_match:
-        session_key = session_match.group(1)
-        session = SessionStore(session_key=session_key)
-        if 'user' not in session:
-            return ('session', session_key)
-        else:
-            return ('user', session['user'])
-
-    # TODO: this should raise an exception
-    return (None, None)
+        serializer = TokenObtainPairSerializer(data=request.data)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except TokenError as e:
+            # TODO: why would this happen?
+            raise InvalidToken(e.args[0])
+        jwtResponse = Response(serializer.validated_data, status=status.HTTP_200_OK)
+        jwtResponse.data['username'] = user.username
+        return jwtResponse
 
 class SignUp(generics.GenericAPIView):
     permission_classes = ()
     authentication_classes = ()
 
     def post(self, request):
-        # assert(request has no jwt)
-
         errors = []
         if not request.data.get('username'):
             errors.append('username cannot be empty')
@@ -154,7 +116,6 @@ class SignUp(generics.GenericAPIView):
             )
 
         # create the user
-        # TODO: catch username already exists
         user_serializer = UserSerializer(data=request.data)
         try:
             user_serializer.is_valid(raise_exception=True)
@@ -193,105 +154,6 @@ class SignUp(generics.GenericAPIView):
         jwtResponse.data['username'] = new_user.username
         return jwtResponse
 
-class LogIn(views.APIView):
-    permission_classes = ()
-    authentication_classes = ()
-
-    def post(self, request):
-        username = request.data['username']
-        password = request.data['password']
-
-        errors = []
-        if not username:
-            errors.append('username cannot be empty')
-        if not password:
-            errors.append('password cannot be empty')
-        if errors:
-            return Response(
-                {'info': errors},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        user = authenticate(
-            request,
-            username=username,
-            password=password,
-        )
-        if user is None:
-            return Response(
-                {'info': ['Invalid login credentials']},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        serializer = TokenObtainPairSerializer(data=request.data)
-
-        try:
-            serializer.is_valid(raise_exception=True)
-        except TokenError as e:
-            raise InvalidToken(e.args[0])
-        jwtResponse = Response(serializer.validated_data, status=status.HTTP_200_OK)
-        jwtResponse.data['username'] = user.username
-        return jwtResponse
-
-class ProfileList(generics.ListAPIView):
-    authentication_classes = ()
-    permission_classes = ()
-    queryset = Profile.objects.all()
-    serializer_class = ProfileSerializer
-
-class ProfileDetail(generics.RetrieveAPIView):
-    authentication_classes = ()
-    permission_classes = ()
-    queryset = Profile.objects.all()
-    serializer_class = ProfileSerializer
-
-def list_directory_contents(path, project):
-    ret = []
-    entries = os.listdir(path)
-    entries.sort(key=lambda x:
-        (os.path.isfile(os.path.join(path, x)), x)
-    )
-    ignored_entries = ['__pycache__', 'files', 'media_dir.txt']
-    for entry in entries:
-        if entry in ignored_entries:
-            continue
-        else:
-            obj = {
-                'name': entry,
-                'directory': os.path.isdir(os.path.join(path, entry)),
-                'project': project,
-            }
-            if os.path.isdir(os.path.join(path, entry)):
-                obj['children'] = list_directory_contents(
-                    os.path.join(path, entry),
-                    project,
-                )
-        ret.append(obj)
-    return ret
-
-def list_directory_tree(path, project):
-    pass
-
-def get_file_contents(file_path):
-    return { 'content': open(file_path).read() }
-    
-def list_user_files(username):
-    modules_dir = os.path.join(settings.MEDIA_ROOT, username, 'modules')
-    return list_directory_contents(modules_dir)
-
-class DirectoryTree(generics.GenericAPIView):
-    def post(self, request):
-        dir_path = os.path.join(
-            settings.MEDIA_ROOT,
-            get_valid_media_path(
-                request.data['project'],
-                request.user.username,
-                request.data['path'],
-            )
-        )
-        assert(os.path.isdir(dir_path))
-        walk = os.walk(dir_path)
-        return Response({'info': walk})
-
 class Session(generics.RetrieveAPIView):
     authentication_classes = (JWTAuthentication,)
     permission_classes = ()
@@ -301,6 +163,7 @@ class Session(generics.RetrieveAPIView):
         response_data = {}
         if request.user.is_anonymous:
             # return the defaults
+            # TODO: this response is fixed, so just return it
             project_name = settings.DEFAULT_PROJECT
             project_source_path = os.path.join(
                 settings.MEDIA_ROOT,
@@ -366,47 +229,77 @@ class Session(generics.RetrieveAPIView):
             })
         return Response(response_data)
 
-class ProfileFromSession(views.APIView):
-    serializer_class = SaveModuleSerializer
-    queryset = Module.objects
+class VideoAuth(generics.GenericAPIView):
+    authentication_classes = (JWTAuthentication,)
+    permission_classes = ()
+
+    def get(self, request):
+        media_path = request.META.get('HTTP_X_ORIGINAL_URI')
+        if not media_path:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        if is_shared_media_path(media_path):
+            return Response(status=status.HTTP_200_OK)
+        if request.user.is_anonymous:
+            return Response(status=status.HTTP_403_FORBIDDEN)
+        if is_user_path(media_path, request.user.username):
+            return Response(status=status.HTTP_200_OK)
+        return Response(status=status.HTTP_403_FORBIDDEN)
+
+class Render(generics.GenericAPIView):
+    authentication_classes = (JWTAuthentication,)
+    permission_classes = (IsAuthenticated,)
 
     def post(self, request):
-        session_match = re.match(
-            'Session (\w+)',
-            request.META['HTTP_AUTHORIZATION'],
+        input_filename = request.data["filename"]
+        input_scene = request.data["scene"]
+        if input_scene is None:
+            return Response({'info': 'no scene specified'})
+
+        # enqueue the job
+        manim_path = os.path.join(
+            settings.MEDIA_ROOT,
+            settings.LIBRARY_DIR,
         )
-        if not session_match:
-            return Response({})
+        project_path = os.path.join(
+            settings.MEDIA_ROOT,
+            settings.USER_MEDIA_DIR,
+            request.user.username,
+            settings.PROJECT_DIR,
+            request.data['project'],
+        )
+        q = Queue(connection=Redis(host=settings.REDIS_HOST))
+        result = q.enqueue(
+            'manimjob.render_scene',
+            input_filename,
+            input_scene,
+            manim_path,
+            project_path,
+        )
 
-        session_key = session_match.group(1)
+        response_data = request.data
+        response_data['job_id'] = result.id
+        return Response(response_data)
 
-        session = SessionStore(session_key=session_key)
-        if 'user' not in session:
-            # profile from session
-            profile = Profile.objects.get(session_key=session_key)
+class CheckRenderJob(generics.GenericAPIView):
+    authentication_classes = ()
+    permission_classes = ()
 
-            # module from profile
-            last_module = profile.last_module
-
-            # no user for anonymous sessions
-            user = ''
+    def get(self, request, job_id):
+        q = Queue(connection=Redis(host=settings.REDIS_HOST))
+        job = q.fetch_job(job_id)
+        if job:
+            response_data = {
+                'status': job.status,
+                'result': job.result,
+            }
+            if job.status == 'finished':
+                response_data['scene'] = job.args[1]
+                response_data['filename'] = job.args[0]
+            return Response(response_data)
         else:
-            # user from session
-            user = User.objects.get(pk=session['user'])
-            # profile from user
-            profile = Profile.objects.get(user=user.pk)
-            # module from profile
-            last_module = profile.last_module
-            # username from user
-            user = user.username
+            return Response({'status': 'unknown scene'})
 
-        return Response({
-            'last_module': self.serializer_class(last_module).data,
-            'last_scene': profile.last_scene,
-            'user': user,
-        })
-
-class NewSave(generics.GenericAPIView):
+class Save(generics.GenericAPIView):
     authentication_classes = (JWTAuthentication,)
     permission_classes = (IsAuthenticated,)
 
@@ -417,10 +310,6 @@ class NewSave(generics.GenericAPIView):
                     {'error': f'request is missing {field}'},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-
-        # check either:
-        # !directory + at least one of code, name in the request or
-        # directory
 
         try:
             project = Project.objects.get(
@@ -508,19 +397,6 @@ class NewSave(generics.GenericAPIView):
                     os.path.join(settings.MEDIA_ROOT, new_path),
                 )
 
-            # try:
-            #     module, created = Module.objects.update_or_create(
-            #         owner=request.user,
-            #         project=project,
-            #         source=media_path,
-            #         defaults=defaults,
-            #     )
-            # except Exception:
-            #     return Response(
-            #         {'error': 'invalid filename'},
-            #         status=status.HTTP_400_BAD_REQUEST,
-            #     )
-
             profile = Profile.objects.get(user=request.user)
             profile.last_module = module
             if 'scene' in request.data:
@@ -531,52 +407,20 @@ class NewSave(generics.GenericAPIView):
             module_serializer = SaveModuleSerializer(module)
             return Response(module_serializer.data)
 
-    ## def post(self, request):
-    ##     name = request.data['name']
-    ##     defaults = {
-    ##         'time': timezone.now(),
-    ##         'source': ContentFile(request.data['code'], name=name),
-    ##     }
-    ##     try:
-    ##         project = Project.objects.get(
-    ##             owner=request.user,
-    ##             name=request.data['project']
-    ##         )
-    ##         module, created = Module.objects.update_or_create(
-    ##             owner=request.user,
-    ##             project=project,
-    ##             source__endswith=os.sep + name,
-    ##             defaults=defaults,
-    ##         )
-    ##     except Exception:
-    ##         return Response(
-    ##             {'error': 'invalid filename'},
-    ##             status=status.HTTP_400_BAD_REQUEST,
-    ##         )
-
-    ##     profile = Profile.objects.get(user=request.user)
-    ##     profile.last_module = module
-    ##     profile.last_scene = request.data['scene']
-    ##     profile.last_project = project
-    ##     profile.save()
-
-    ##     module_serializer = SaveModuleSerializer(module)
-    ##     return Response(module_serializer.data)
-
 class Files(generics.GenericAPIView):
     authentication_classes = (JWTAuthentication,)
     permission_classes = ()
 
     def post(self, request):
-        # TODO: secure this (factor from models.Module)
-        # TODO: check for user file, then shared file
-        # TODO: check if the project is shared
+        # TODO: secure directory construction (factor from models.Module)
+        # TODO: check if the project is shared, if so read from shared data
         project = request.data['project']
         if project == "manim":
-            media_dir = settings.LIBRARY_DIR
+            source_dir = settings.LIBRARY_DIR
         elif request.user.is_anonymous:
             # read from shared
-            media_dir = os.path.join(
+            source_dir = os.path.join(
+                settings.MEDIA_ROOT,
                 settings.SHARED_MEDIA_DIR,
                 settings.PROJECT_DIR,
                 project,
@@ -584,7 +428,9 @@ class Files(generics.GenericAPIView):
             )
         else:
             # read from user files
-            media_dir = os.path.join(
+            # TODO: fails if a user looks for a non-manim shared project
+            source_dir = os.path.join(
+                settings.MEDIA_ROOT,
                 settings.USER_MEDIA_DIR,
                 request.user.username,
                 settings.PROJECT_DIR,
@@ -594,101 +440,34 @@ class Files(generics.GenericAPIView):
         path = os.path.join(*request.data['pathList'])
         path = os.path.join(
             settings.MEDIA_ROOT,
-            media_dir,
+            source_dir,
             path,
         )
+
+        shared_dir = os.path.join(
+            settings.MEDIA_ROOT,
+            settings.SHARED_MEDIA_DIR,
+        )
+
+        valid = False
+        if in_directory(path, shared_dir):
+            valid = True
+        elif in_directory(
+            path,
+            os.path.join(
+                settings.MEDIA_ROOT,
+                settings.USER_MEDIA_DIR,
+                request.user.username,
+            )
+        ):
+            valid = True
+        if not valid:
+            return Response({'info': 'no'})
+
         if os.path.isdir(path):
             return Response(list_directory_contents(path, project))
         else:
             return Response(get_file_contents(path))
-
-class Render(NewSave):
-    authentication_classes = (JWTAuthentication,)
-    permission_classes = (IsAuthenticated,)
-
-    def post(self, request):
-        input_filename = request.data["filename"]
-        input_scene = request.data["scene"]
-        if input_scene is None:
-            return Response({'info': 'no scene specified'})
-
-        # enqueue the job
-        manim_path = os.path.join(
-            os.getcwd(),
-            settings.MEDIA_ROOT,
-            settings.LIBRARY_DIR,
-        )
-        project_path = os.path.join(
-            os.getcwd(),
-            settings.MEDIA_ROOT,
-            settings.USER_MEDIA_DIR,
-            request.user.username,
-            settings.PROJECT_DIR,
-            request.data['project'],
-        )
-        q = Queue(connection=Redis())
-        result = q.enqueue(
-            manimjob.render_scene,
-            input_filename,
-            input_scene,
-            manim_path,
-            project_path,
-        )
-
-        response_data = request.data
-        response_data['job_id'] = result.id
-        return Response(response_data)
-
-class CheckRenderJob(generics.GenericAPIView):
-    authentication_classes = ()
-    permission_classes = ()
-
-    def get(self, request):
-        job_id = request.query_params.get('job_id', None)
-        if not job_id:
-            # TODO: use http bad request
-            return Response({'error': 'no job id'})
-        q = Queue(connection=Redis())
-        job = q.fetch_job(job_id)
-        if job:
-            response_data = {
-                'status': job.status,
-                'result': job.result,
-            }
-            if job.status == 'finished':
-                response_data['scene'] = job.args[1]
-                response_data['filename'] = job.args[0]
-            return Response(response_data)
-        else:
-            return Response({'status': 'unknown scene'})
-
-# TODO: use a RUD view for this
-class ModuleViewSet(viewsets.ModelViewSet):
-    authentication_classes = ()
-    permission_classes = ()
-    serializer_class = SaveModuleSerializer
-
-    def get_queryset(self):
-        user = self.request.user
-        return Module.objects.all()
-
-    def get_permissions(self):
-        # TODO: disable update, as it is handled by create
-        return []
-        # permission_classes = [
-        #     permissions.IsAuthenticated,
-        #     IsOwner,
-        # ] 
-        # return [permission() for permission in permission_classes]
-
-    def perform_create(self, serializer):
-        serializer.save(owner=self.request.user)
-
-    # TODO: this should be an entirely different view
-    def create(self, request, *args, **kwargs):
-        # save the request to the database
-        response = super().create(request) # overridden with update_or_create()
-        return response
 
 class ProjectDelete(generics.DestroyAPIView):
     authentication_classes = (JWTAuthentication,)
@@ -778,10 +557,29 @@ class ModuleDelete(generics.DestroyAPIView):
         else:
             return super(ModuleDelete, self).delete(request, *args, **kwargs)
 
+def list_directory_contents(path, project):
+    ret = []
+    entries = os.listdir(path)
+    entries.sort(key=lambda x:
+        (os.path.isfile(os.path.join(path, x)), x)
+    )
+    ignored_entries = ['__pycache__', 'files', 'media_dir.txt']
+    for entry in entries:
+        if entry in ignored_entries:
+            continue
+        else:
+            obj = {
+                'name': entry,
+                'directory': os.path.isdir(os.path.join(path, entry)),
+                'project': project,
+            }
+            if os.path.isdir(os.path.join(path, entry)):
+                obj['children'] = list_directory_contents(
+                    os.path.join(path, entry),
+                    project,
+                )
+        ret.append(obj)
+    return ret
 
-class ProjectList(generics.ListAPIView):
-    authentication_classes = ()
-    permission_classes = ()
-    queryset = Project.objects.all()
-    serializer_class = ProjectSerializer
-
+def get_file_contents(file_path):
+    return { 'content': open(file_path).read() }

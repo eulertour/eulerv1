@@ -5,30 +5,16 @@ from rest_framework_simplejwt import views as jwt_views
 from . import views
 
 urlpatterns = [
-    path('render/', views.Render.as_view()),
-    path('checkrender/', views.CheckRenderJob.as_view()),
-    path('save/', views.NewSave.as_view()),
-    path('signup/', views.SignUp.as_view()),
     path('login/', views.LogIn.as_view()),
-
-    path('token/', jwt_views.TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('token/refresh/', jwt_views.TokenRefreshView.as_view(), name='token_refresh'),
+    path('signup/', views.SignUp.as_view()),
     path('session/', views.Session.as_view()),
     path('video/', views.VideoAuth.as_view()),
 
-    path('module/', views.ModuleDelete.as_view()),
-    path('project/', views.ProjectDelete.as_view()),
-    path('tree/', views.DirectoryTree.as_view()),
+    path('render/', views.Render.as_view()),
+    path('render/<job_id>', views.CheckRenderJob.as_view()),
 
-    path('profilefromsession/', views.ProfileFromSession.as_view()),
-    path('users/', views.UserList.as_view()),
-    path('users/<int:pk>/', views.UserDetail.as_view()),
-    path('users/delete/<int:pk>/', views.UserDelete.as_view()),
-    path('profiles/', views.ProfileList.as_view()),
+    path('save/', views.Save.as_view()),
     path('files/', views.Files.as_view()),
-    path('projects/', views.ProjectList.as_view()),
+    path('project/', views.ProjectDelete.as_view()),
+    path('module/', views.ModuleDelete.as_view()),
 ]
-
-router = DefaultRouter()
-router.register(r'modules', views.ModuleViewSet, basename='modules')
-urlpatterns += router.urls

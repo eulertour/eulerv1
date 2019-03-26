@@ -1,0 +1,68 @@
+# Run with e.g. FRONTEND_PATH=/home/devneal/etr-frontend \
+#               DATA_PATH=/srv/data \
+#               DOMAIN=eulertour.com docker-compose up
+version: '3.1'
+
+services:
+  backend:
+    build:
+      context: etr-backend/
+      args:
+        - domain=${DOMAIN:?No domain specified}
+    ports:
+      - 8000:8000
+      - 9000:9000
+    volumes:
+      - ${FRONTEND_PATH:?No frontend path specified}/config/keys:/var/keys
+      - ${DATA_PATH:?No data path specified}:/srv/data
+    depends_on:
+      - db
+  frontend:
+    image: etr-frontend
+    build:
+      context: etr-frontend/
+      dockerfile: Dockerfile
+      args:
+        - domain=${DOMAIN:?No domain specified}
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - TZ=America/Los_Angeles
+      - URL=${DOMAIN:?No domain specified}
+      - SUBDOMAINS=www,api,media
+      - EMAIL=devin@eulertour.com
+      - REACT_APP_DOMAIN=${DOMAIN:?No domain specified}
+    volumes:
+      - ${FRONTEND_PATH:?No frontend path specified}/config:/config
+      - ${DATA_PATH:?No data path specified}:/srv/data
+    ports:
+      - 80:80
+      - 443:443
+      - 3000:3000
+    restart: unless-stopped
+    depends_on:
+      - backend
+  workers:
+    build:
+      context: etr-workers/
+    depends_on:
+      - redis
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/bin/docker:/usr/bin/docker
+    userns_mode: "host"
+  redis:
+    image: redis:5.0.3
+  db:
+    image: postgres:9.6
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - pg_backups:/pg_backups
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=etrdatabase
+
+volumes:
+  pg_data: {}
+  pg_backups: {}
