@@ -1,5 +1,6 @@
 # Run with e.g. FRONTEND_CONFIG_PATH=/etc/eulertour/frontend \
 #               BACKEND_DATA_PATH=/srv/eulertour/backend \
+#               COMPOSE_PROJECT_NAME=eulertour \
 #               DOMAIN=eulertour.dev docker-compose up
 version: '3.1'
 
@@ -20,10 +21,8 @@ services:
     environment:
       - DJANGO_MEDIA_ROOT=${BACKEND_DATA_PATH:?No data path specified}
   frontend:
-    image: frontend
     build:
       context: frontend/
-      dockerfile: Dockerfile
       args:
         - domain=${DOMAIN:?No domain specified}
     cap_add:

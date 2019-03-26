@@ -15,4 +15,3 @@ RUN chown -R root:root *
 
 FROM linuxserver/letsencrypt
 COPY --from=0 /opt /var/www/etr-frontend
-WORKDIR /var/www/etr-frontend

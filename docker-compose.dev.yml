@@ -1,0 +1,13 @@
+version: '3.1'
+
+services:
+  backend:
+    ports:
+      - 9000:9000
+    volumes:
+      - ${PWD}:/opt/eulertour
+  frontend:
+    ports:
+      - 3000:3000
+    volumes:
+      - ${PWD}:/opt/eulertour

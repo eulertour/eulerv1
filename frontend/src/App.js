@@ -77,6 +77,7 @@ class App extends React.Component {
         this.logOut = this.logOut.bind(this);
         this.restoreSession = this.restoreSession.bind(this);
         this.resetProject = this.resetProject.bind(this);
+
         this.treeChange = this.treeChange.bind(this);
     }
 
@@ -93,8 +94,8 @@ class App extends React.Component {
             let files = response.data.files.map(obj => {
                 if (obj.directory) {
                     delete obj.directory;
-	            let childrenNotLoaded = consts.CHILDREN_NOT_LOADED;
-		    childrenNotLoaded[0]['id'] = childrenNotLoaded[0]['name'];
+                let childrenNotLoaded = consts.CHILDREN_NOT_LOADED;
+            childrenNotLoaded[0]['id'] = childrenNotLoaded[0]['name'];
                     obj['children'] = childrenNotLoaded;
                     obj['loading'] = true;
                 } else {
@@ -103,7 +104,7 @@ class App extends React.Component {
                 if (obj['library']) {
                     obj['readOnly'] = true;
                 }
-		obj['id'] = obj['name'];
+        obj['id'] = obj['name'];
                 return obj;
             });
             this.setState({
@@ -471,8 +472,8 @@ class App extends React.Component {
             let files = response.data.files.map(obj => {
                 if (obj.directory) {
                     delete obj.directory;
-	            let childrenNotLoaded = consts.CHILDREN_NOT_LOADED;
-		    childrenNotLoaded[0]['id'] = childrenNotLoaded[0]['name'];
+                let childrenNotLoaded = consts.CHILDREN_NOT_LOADED;
+            childrenNotLoaded[0]['id'] = childrenNotLoaded[0]['name'];
                     obj['children'] = childrenNotLoaded;
                     obj['loading'] = true;
                 } else {
@@ -481,7 +482,7 @@ class App extends React.Component {
                 if (obj['library']) {
                     obj['readOnly'] = true;
                 }
-		obj['id'] = obj['name'];
+        obj['id'] = obj['name'];
                 return obj;
             });
             this.setState({
@@ -591,7 +592,6 @@ class App extends React.Component {
     }
 
     treeChange(nodes) {
-	console.log('called onChange');
         this.setState({editorFiles: nodes});
     }
 
@@ -612,8 +612,8 @@ class App extends React.Component {
             if (response.data.length !== 0) {
                 let files = response.data.map(obj => {
                     if (obj.directory) {
-	                let childrenNotLoaded = consts.CHILDREN_NOT_LOADED;
-		        childrenNotLoaded[0]['id'] = childrenNotLoaded[0]['name'];
+                    let childrenNotLoaded = consts.CHILDREN_NOT_LOADED;
+                childrenNotLoaded[0]['id'] = childrenNotLoaded[0]['name'];
                         obj['children'] = childrenNotLoaded;
                         obj['loading'] = true;
                         obj['directory'] = node;
@@ -624,14 +624,14 @@ class App extends React.Component {
                         obj['library'] = true;
                         obj['readOnly'] = true;
                     }
-		    obj['id'] = nodeCopy['id'] + '/' + obj['name'];
+            obj['id'] = nodeCopy['id'] + '/' + obj['name'];
                     return obj;
                 });
                 nodeCopy['children'] = files;
             } else {
                 nodeCopy['empty'] = true;
-		let noChildren = consts.NO_CHILDREN;
-		noChildren[0]['id'] = nodeCopy['id'] + '/' + noChildren['name'];
+        let noChildren = consts.NO_CHILDREN;
+        noChildren[0]['id'] = nodeCopy['id'] + '/' + noChildren['name'];
                 nodeCopy['children'] = noChildren;
             }
             nodeCopy['loading'] = false;
@@ -981,14 +981,27 @@ class App extends React.Component {
                 </div>
                 {loginModal}
                 {resetModal}
-		<Tree nodes={this.state.editorFiles} onChange={this.treeChange}>
-                    {({style, ...p}) => (
-	                <div style={style}>
-			    <renderers.Expandable node={p.node} onChange={p.onChange}>
-			    	{p.node.name}
-			    </renderers.Expandable>
-			</div>
-		    )}
+                <Tree nodes={this.state.editorFiles} onChange={this.treeChange}>
+                    {({style, node, ...props}) => (
+                        <div
+                            style={style}
+                        >
+                            <renderers.Expandable
+                                node={node}
+                                onChange={(update) => {
+                                    props.onChange(update);
+                                    if (update.node.state.expanded &&
+                                        update.node.loading) {
+                                        this.fetchDirectoryContents(update.node);
+                                    } else {
+                                        this.fetchFileContents(update.node);
+                                    }
+                                }}
+                            >
+                                {node.name}
+                            </renderers.Expandable>
+                        </div>
+                    )}
                 </Tree>
             </div>
         );
