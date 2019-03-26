@@ -6,7 +6,7 @@
   "scripts": {
     "prepublish": "npm run lib",
     "lib": "npm run babel",
-    "babel": "rimraf lib && babel src/ -d lib/",
+    "babel": "rimraf lib && ./node_modules/.bin/babel src/ -d lib/",
     "test": "karma start karma.conf.js",
     "test-travis": "karma start --browsers Firefox --single-run",
     "example": "webpack-dev-server --content-base ./example/ --config ./example/webpack.config.js"
