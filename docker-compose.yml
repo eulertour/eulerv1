@@ -1,12 +1,12 @@
-# Run with e.g. FRONTEND_PATH=/home/devneal/etr-frontend \
+# Run with e.g. FRONTEND_PATH=/home/devneal/eulertour/frontend \
 #               DATA_PATH=/srv/data \
-#               DOMAIN=eulertour.com docker-compose up
+#               DOMAIN=eulertour.dev docker-compose up
 version: '3.1'
 
 services:
   backend:
     build:
-      context: etr-backend/
+      context: backend/
       args:
         - domain=${DOMAIN:?No domain specified}
     ports:
@@ -18,9 +18,9 @@ services:
     depends_on:
       - db
   frontend:
-    image: etr-frontend
+    image: frontend
     build:
-      context: etr-frontend/
+      context: frontend/
       dockerfile: Dockerfile
       args:
         - domain=${DOMAIN:?No domain specified}
@@ -44,7 +44,7 @@ services:
       - backend
   workers:
     build:
-      context: etr-workers/
+      context: workers/
     depends_on:
       - redis
     volumes:
