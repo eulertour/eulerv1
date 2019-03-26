@@ -1,5 +1,5 @@
-# Run with e.g. FRONTEND_PATH=/home/devneal/eulertour/frontend \
-#               DATA_PATH=/srv/data \
+# Run with e.g. FRONTEND_CONFIG_PATH=/etc/eulertour/frontend \
+#               BACKEND_DATA_PATH=/srv/eulertour/backend \
 #               DOMAIN=eulertour.dev docker-compose up
 version: '3.1'
 
@@ -13,10 +13,12 @@ services:
       - 8000:8000
       - 9000:9000
     volumes:
-      - ${FRONTEND_PATH:?No frontend path specified}/config/keys:/var/keys
-      - ${DATA_PATH:?No data path specified}:/srv/data
+      - ${FRONTEND_CONFIG_PATH:?No frontend path specified}/keys:/var/keys
+      - ${BACKEND_DATA_PATH:?No data path specified}:/srv/data
     depends_on:
       - db
+    environment:
+      - DJANGO_MEDIA_ROOT=${BACKEND_DATA_PATH:?No data path specified}
   frontend:
     image: frontend
     build:
@@ -33,8 +35,8 @@ services:
       - EMAIL=devin@eulertour.com
       - REACT_APP_DOMAIN=${DOMAIN:?No domain specified}
     volumes:
-      - ${FRONTEND_PATH:?No frontend path specified}/config:/config
-      - ${DATA_PATH:?No data path specified}:/srv/data
+      - ${FRONTEND_CONFIG_PATH:?No frontend path specified}:/config
+      - ${BACKEND_DATA_PATH:?No data path specified}:/srv/data
     ports:
       - 80:80
       - 443:443

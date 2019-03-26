@@ -257,11 +257,11 @@ class Render(generics.GenericAPIView):
 
         # enqueue the job
         manim_path = os.path.join(
-            settings.MEDIA_ROOT,
+            os.environ['DJANGO_MEDIA_ROOT'],
             settings.LIBRARY_DIR,
         )
         project_path = os.path.join(
-            settings.MEDIA_ROOT,
+            os.environ['DJANGO_MEDIA_ROOT'],
             settings.USER_MEDIA_DIR,
             request.user.username,
             settings.PROJECT_DIR,

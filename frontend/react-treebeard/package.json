@@ -76,11 +76,12 @@
     "webpack-dev-server": "^2.5.1"
   },
   "dependencies": {
+    "@babel/runtime": "^7.0.0",
     "@emotion/core": "^0.13.1",
     "@emotion/styled": "^0.10.6",
-    "@babel/runtime": "^7.0.0",
     "deep-equal": "^1.0.1",
     "prop-types": "^15.6.2",
+    "react-transition-group": "^2.7.1",
     "shallowequal": "^1.1.0",
     "velocity-react": "^1.4.1"
   }
