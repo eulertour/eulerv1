@@ -28,7 +28,7 @@
     "react-scripts": "2.1.1",
     "react-treebeard": "file:react-treebeard",
     "react-virtualized": "^9.21.0",
-    "react-virtualized-tree": "^3.2.0",
+    "react-virtualized-tree": "file:react-virtualized-tree",
     "redux": "^4.0.1",
     "video-react": "^0.13.1"
   },

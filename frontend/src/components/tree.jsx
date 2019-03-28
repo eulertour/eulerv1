@@ -21,6 +21,11 @@ import {
     faFolderOpen
 } from '@fortawesome/free-solid-svg-icons'
 import { faPython } from '@fortawesome/free-brands-svg-icons'
+import Tree, { renderers } from 'react-virtualized-tree';
+import 'react-virtualized/styles.css';
+import 'react-virtualized-tree/lib/main.css';
+import 'material-icons/css/material-icons.css';
+import 'material-icons/iconfont/material-icons.css';
 
 library.add(
     faAlignLeft,
@@ -34,6 +39,66 @@ library.add(
     faFile,
     faFolderOpen
 );
+
+const NodeNameRenderer = ({node}) => {
+    let iconComponent;
+    let iconName;
+    let iconPrefix = "fas";
+    if (!('children' in node) && node.empty) {
+        iconComponent = null;
+    } else {
+        if ('children' in node) {
+            iconName = "folder";
+        } else {
+            if (node.name.endsWith(".py")) {
+                iconPrefix = "fab";
+                iconName = "python";
+            } else if (node.name.endsWith(".tex")) {
+                iconName = "superscript";
+            } else {
+                iconName = "align-left";
+            }
+        }
+        iconComponent = (
+            <FontAwesomeIcon
+                className="tree-icon"
+                icon={[iconPrefix, iconName]}
+            />
+        );
+    }
+    let style = {};
+    if (node.untitled) {
+        // return (
+        //     <input
+        //         ref={(input) => {this.nameInput = input}}
+        //         value={this.state.newFileName}
+        //         onChange={(event) => {
+        //             this.setState({newFileName: event.target.value});
+        //         }}
+        //         onKeyDown={(event) => {
+        //             if (event.keyCode === 13) {
+        //                 this.nameNewFile(node);
+        //             }
+        //         }}
+        //         onBlur={() => {
+        //             this.nameNewFile(node);
+        //         }}
+        //     />
+        // );
+    } else if (node.active) {
+        style['color'] = '#FFFFFF';
+    } else if (node.readOnly) {
+        style['color'] = '#666666';
+    } else {
+        style['color'] = 'inherit';
+    }
+    return (
+        <span style={style} className={"tree-text" + (node.children === undefined ? " no-children" : "")}>
+            {iconComponent}
+            {node.name}
+        </span>
+    );
+};
 
 const style = {
     tree: {
@@ -331,20 +396,41 @@ class TreeExample extends React.Component {
                     </div>
                 </div>
                 <div className="treebeard-container">
-                    <PerfectScrollbar option={{wheelPropagation: false}} >
-                        <Treebeard
-                            data={this.props.files}
-                            onToggle={(node, toggled) => {
-                                if ('toggled' in node && node.toggled !== toggled) {
-                                    this.setState({animating: true});
-                                }
-                                this.props.onToggle(node, toggled);
-                            }}
-                            style={style}
-                            decorators={decorators}
-                            animations={false}
-                        />
-                    </PerfectScrollbar>
+                <PerfectScrollbar>
+                    <Tree
+                        nodes={this.props.files}
+                        onChange={this.props.onTreeChange}
+                        nodeMarginLeft={20}
+                        width={400}
+                        autoHeight={true}           // prevent react-virtualized from scrolling vertically
+                        overscanRowCount={Infinity} // disable virtualization
+                    >
+                        {({style, node, ...props}) => {
+                            return (
+                                <div style={style}>
+                                    <renderers.Expandable
+                                        node={node}
+                                        style={style}
+                                        iconsClassNameMap = {{
+                                            expanded: 'tree-cursor expanded',
+                                            collapsed: 'tree-cursor collapsed',
+                                        }}
+                                        onChange={(update) => {
+                                            props.onChange(update);
+                                            if (update.node.state.expanded &&
+                                                update.node.loading) {
+                                                this.props.onDirFetch(update.node);
+                                            } else {
+                                                this.props.onFileFetch(update.node);
+                                            }
+                                        }}
+                                    >
+                                        <NodeNameRenderer node={node}/>
+                                    </renderers.Expandable>
+                                </div>
+                            )}}
+                    </Tree>
+                </PerfectScrollbar>
                 </div>
             </div>
         );
@@ -352,3 +438,16 @@ class TreeExample extends React.Component {
 }
 
 export default TreeExample;
+
+// <Treebeard
+//     data={this.props.files}
+//     onToggle={(node, toggled) => {
+//         if ('toggled' in node && node.toggled !== toggled) {
+//             this.setState({animating: true});
+//         }
+//         this.props.onToggle(node, toggled);
+//     }}
+//     style={style}
+//     decorators={decorators}
+//     animations={false}
+// />

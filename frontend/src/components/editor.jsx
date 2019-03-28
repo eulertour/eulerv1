@@ -175,6 +175,10 @@ class Editor extends Component {
                             onNewFileName={this.props.onNewFileName}
                             onToggle={this.props.onToggle}
                             onTreeToggle={this.handleTreeToggle}
+
+                            onTreeChange={this.props.onTreeChange}
+                            onFileFetch={this.props.onFileFetch}
+                            onDirFetch={this.props.onDirFetch}
                         />
                     }
                     <div className="editor-part">

@@ -14,7 +14,6 @@ import _ from 'lodash';
 import Login from './components/login.jsx';
 import closeIcon from './assets/e-remove.svg';
 import * as utils from './utils.js';
-import Tree, { renderers } from 'react-virtualized-tree';
 import 'react-virtualized/styles.css';
 import 'react-virtualized-tree/lib/main.css';
 import 'material-icons/css/material-icons.css';
@@ -977,32 +976,14 @@ class App extends React.Component {
                         onSetAutosaveTimeout={this.handleSetAutosaveTimeout}
                         onToggle={this.handleToggle}
                         onProjectReset={this.handleProjectReset}
+
+                        onTreeChange={this.treeChange}
+                        onFileFetch={this.fetchFileContents}
+                        onDirFetch={this.fetchDirectoryContents}
                     />
                 </div>
                 {loginModal}
                 {resetModal}
-                <Tree nodes={this.state.editorFiles} onChange={this.treeChange}>
-                    {({style, node, ...props}) => (
-                        <div
-                            style={style}
-                        >
-                            <renderers.Expandable
-                                node={node}
-                                onChange={(update) => {
-                                    props.onChange(update);
-                                    if (update.node.state.expanded &&
-                                        update.node.loading) {
-                                        this.fetchDirectoryContents(update.node);
-                                    } else {
-                                        this.fetchFileContents(update.node);
-                                    }
-                                }}
-                            >
-                                {node.name}
-                            </renderers.Expandable>
-                        </div>
-                    )}
-                </Tree>
             </div>
         );
     }
