@@ -21,11 +21,14 @@ import {
     faFolderOpen
 } from '@fortawesome/free-solid-svg-icons'
 import { faPython } from '@fortawesome/free-brands-svg-icons'
-import Tree, { renderers } from 'react-virtualized-tree';
+import VTree, { renderers } from 'react-virtualized-tree';
 import 'react-virtualized/styles.css';
 import 'react-virtualized-tree/lib/main.css';
 import 'material-icons/css/material-icons.css';
 import 'material-icons/iconfont/material-icons.css';
+import { Tree, Icon } from 'antd';
+
+const { TreeNode } = Tree;
 
 library.add(
     faAlignLeft,
@@ -40,67 +43,7 @@ library.add(
     faFolderOpen
 );
 
-const NodeNameRenderer = ({node}) => {
-    let iconComponent;
-    let iconName;
-    let iconPrefix = "fas";
-    if (!('children' in node) && node.empty) {
-        iconComponent = null;
-    } else {
-        if ('children' in node) {
-            iconName = "folder";
-        } else {
-            if (node.name.endsWith(".py")) {
-                iconPrefix = "fab";
-                iconName = "python";
-            } else if (node.name.endsWith(".tex")) {
-                iconName = "superscript";
-            } else {
-                iconName = "align-left";
-            }
-        }
-        iconComponent = (
-            <FontAwesomeIcon
-                className="tree-icon"
-                icon={[iconPrefix, iconName]}
-            />
-        );
-    }
-    let style = {};
-    if (node.untitled) {
-        // return (
-        //     <input
-        //         ref={(input) => {this.nameInput = input}}
-        //         value={this.state.newFileName}
-        //         onChange={(event) => {
-        //             this.setState({newFileName: event.target.value});
-        //         }}
-        //         onKeyDown={(event) => {
-        //             if (event.keyCode === 13) {
-        //                 this.nameNewFile(node);
-        //             }
-        //         }}
-        //         onBlur={() => {
-        //             this.nameNewFile(node);
-        //         }}
-        //     />
-        // );
-    } else if (node.active) {
-        style['color'] = '#FFFFFF';
-    } else if (node.readOnly) {
-        style['color'] = '#666666';
-    } else {
-        style['color'] = 'inherit';
-    }
-    return (
-        <span style={style} className={"tree-text" + (node.children === undefined ? " no-children" : "")}>
-            {iconComponent}
-            {node.name}
-        </span>
-    );
-};
-
-const style = {
+const beardstyle = {
     tree: {
         base: {
             width: 'fit-content',
@@ -174,6 +117,9 @@ const style = {
     }
 };
 
+const treeNodeStyle = {
+};
+
 class TreeExample extends React.Component {
     constructor(props){
         super(props);
@@ -199,6 +145,68 @@ class TreeExample extends React.Component {
         this.props.onNewFileName(node, this.state.newFileName.slice());
         this.setState({newFileName: ""});
     }
+
+    renderTreeNodes(data) {
+        return data.map((node) => {
+            let iconComponent;
+            let iconName;
+            let iconPrefix = "fas";
+            let className = "tree-text-container";
+            if (!('children' in node) && node.empty) {
+                iconComponent = null;
+            } else {
+                if ('children' in node) {
+                    iconName = "folder";
+                } else {
+                    className += " tree-left-pad";
+                    if (node.name.endsWith(".py")) {
+                        iconPrefix = "fab";
+                        iconName = "python";
+                    } else if (node.name.endsWith(".tex")) {
+                        iconName = "superscript";
+                    } else {
+                        iconName = "align-left";
+                    }
+                }
+                iconComponent = (
+                    <FontAwesomeIcon
+                        className="tree-icon"
+                        icon={[iconPrefix, iconName]}
+                    />
+                );
+            }
+            if (node.children) {
+                return (
+                    <TreeNode
+                        title={node.name}
+                        key={node.id}
+                        dataRef={node}
+                        icon={iconComponent}
+                        selectable={false}
+                    >
+                        {this.renderTreeNodes(node.children)}
+                    </TreeNode>
+                );
+            }
+            return <TreeNode
+                title={node.name}
+                key={node.id}
+                dataRef={node}
+                icon={iconComponent}
+                isLeaf={true}
+            />;
+        });
+    }
+
+    onLoadData = treeNode => new Promise((resolve) => {
+        if (!treeNode.props.dataRef.loading) {
+            console.log('already available');
+            resolve();
+            return;
+        }
+        this.props.onDirFetch(treeNode.props.dataRef);
+        resolve();
+    })
 
     render() {
         let decorators = Treebeard.defaultProps.decorators;
@@ -395,42 +403,26 @@ class TreeExample extends React.Component {
                         </div>
                     </div>
                 </div>
-                <div className="treebeard-container">
-                <PerfectScrollbar>
-                    <Tree
-                        nodes={this.props.files}
-                        onChange={this.props.onTreeChange}
-                        nodeMarginLeft={20}
-                        width={400}
-                        autoHeight={true}           // prevent react-virtualized from scrolling vertically
-                        overscanRowCount={Infinity} // disable virtualization
-                    >
-                        {({style, node, ...props}) => {
-                            return (
-                                <div style={style}>
-                                    <renderers.Expandable
-                                        node={node}
-                                        style={style}
-                                        iconsClassNameMap = {{
-                                            expanded: 'tree-cursor expanded',
-                                            collapsed: 'tree-cursor collapsed',
-                                        }}
-                                        onChange={(update) => {
-                                            props.onChange(update);
-                                            if (update.node.state.expanded &&
-                                                update.node.loading) {
-                                                this.props.onDirFetch(update.node);
-                                            } else {
-                                                this.props.onFileFetch(update.node);
-                                            }
-                                        }}
-                                    >
-                                        <NodeNameRenderer node={node}/>
-                                    </renderers.Expandable>
-                                </div>
-                            )}}
-                    </Tree>
-                </PerfectScrollbar>
+                <div className="tree-container">
+                    <PerfectScrollbar>
+                        <Tree
+                            showIcon
+                            switcherIcon={<Icon
+                                type="caret-down"
+                                style={{
+                                    color: '#b43daf',
+                                    fontSize: '24px',
+                                    width: '16px',
+                                }}
+                            />}
+                            loadData={this.onLoadData}
+                            onSelect={(value, e, extra) => {
+                                this.props.onFileFetch(e.node.props.dataRef);
+                            }}
+                        >
+                            {this.renderTreeNodes(this.props.files)}
+                        </Tree>
+                    </PerfectScrollbar>
                 </div>
             </div>
         );

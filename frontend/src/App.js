@@ -50,8 +50,6 @@ class App extends React.Component {
             showFileMoveModal: false,
             showLoginModal: false,
             showProjectResetModal: false,
-
-            nodes: consts.EXAMPLE_NODES,
         }
         this.fetchDirectoryContents = this.fetchDirectoryContents.bind(this);
         this.fetchFileContents = this.fetchFileContents.bind(this);
@@ -471,8 +469,8 @@ class App extends React.Component {
             let files = response.data.files.map(obj => {
                 if (obj.directory) {
                     delete obj.directory;
-                let childrenNotLoaded = consts.CHILDREN_NOT_LOADED;
-            childrenNotLoaded[0]['id'] = childrenNotLoaded[0]['name'];
+                    let childrenNotLoaded = consts.CHILDREN_NOT_LOADED;
+                    childrenNotLoaded[0]['id'] = childrenNotLoaded[0]['name'];
                     obj['children'] = childrenNotLoaded;
                     obj['loading'] = true;
                 } else {
@@ -481,7 +479,7 @@ class App extends React.Component {
                 if (obj['library']) {
                     obj['readOnly'] = true;
                 }
-        obj['id'] = obj['name'];
+                obj['id'] = obj['name'];
                 return obj;
             });
             this.setState({
