@@ -15,8 +15,6 @@ import _ from 'lodash';
 import Login from './components/login.jsx';
 import closeIcon from './assets/e-remove.svg';
 import * as utils from './utils.js';
-import 'material-icons/css/material-icons.css';
-import 'material-icons/iconfont/material-icons.css';
 
 class App extends React.Component {
     static propTypes = {
@@ -140,7 +138,7 @@ class App extends React.Component {
     handleFileRename(e, data, target) {
         e.stopPropagation();
         let filesCopy = _.cloneDeep(this.state.editorFiles);
-        let filePath = target.children[0].id;
+        let filePath = data.node.id;
         let pathList = filePath.split('/');
         let renameNode = utils.getNodeFromPathList(
             filesCopy,
@@ -154,7 +152,7 @@ class App extends React.Component {
 
     handleFileDelete(e, data, target) {
         e.stopPropagation();
-        let filePath = target.children[0].id;
+        let filePath = data.node.id;
         let pathList = filePath.split('/');
         let delNode = utils.getNodeFromPathList(
             this.state.editorFiles,
@@ -232,7 +230,11 @@ class App extends React.Component {
         }
         if (!valid) {
             alert(errorMsg);
-            _.remove(siblingList, (o) => {return _.isEqual(o, node)});
+            if (node.name === undefined) {
+                _.remove(siblingList, (o) => {return _.isEqual(o, node)});
+            } else {
+                nodeCopy.untitled = false;
+            }
             this.setState({editorFiles: filesCopy});
             return;
         }
@@ -273,8 +275,8 @@ class App extends React.Component {
             nodeCopy['untitled'] = false;
             nodeCopy['name'] = name;
             nodeCopy['project'] = this.state.project;
-            if ('parent' in nodeCopy) {
-                nodeCopy['id'] = nodeCopy['parent'].id + '/' + name;
+            if ('directory' in nodeCopy) {
+                nodeCopy['id'] = nodeCopy['directory'].id + '/' + name;
             } else {
                 nodeCopy['id'] = name;
             }
@@ -335,11 +337,15 @@ class App extends React.Component {
             });
         })
         .catch(error => {
-            if (siblingList.length === 1) {
-                nodeCopy.directory.empty = true;
-                nodeCopy.directory.children = consts.NO_CHILDREN;
+            if (node.name === undefined) {
+                if (siblingList.length === 1) {
+                    nodeCopy.directory.empty = true;
+                    nodeCopy.directory.children = consts.NO_CHILDREN;
+                } else {
+                    _.remove(siblingList, (o) => {return _.isEqual(o, node)});
+                }
             } else {
-                _.remove(siblingList, (o) => {return _.isEqual(o, node)});
+                nodeCopy.untitled = false;
             }
             this.setState({editorFiles: filesCopy});
             if (error.response !== undefined &&
@@ -431,7 +437,7 @@ class App extends React.Component {
                 nodeCopy.children[0].id = nodeCopy.id + '/' + nodeCopy.children[0].name;
             }
         } else {
-            let pathList = target.children[0].id.split('/');
+            let pathList = data.node.id.split('/');
             let newParent = utils.getNodeFromPathList(filesCopy, pathList);
             siblingList = newParent.children;
             if (!newParent.toggled) {
