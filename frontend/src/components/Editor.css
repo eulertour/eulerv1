@@ -1,0 +1,17 @@
+.react-codemirror2 {
+  height: calc(100% - 31px);
+}
+
+.CodeMirror {
+  /* Set height, width, borders, and global font properties here */
+  font-family: monospace;
+  font-size: 9pt;
+  color: black;
+  direction: ltr;
+  height: 100%;
+}
+
+.CodeMirror-overlayscroll-horizontal div, .CodeMirror-overlayscroll-vertical div {
+  background: #ddd;
+}
+

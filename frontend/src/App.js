@@ -90,8 +90,8 @@ class App extends React.Component {
             let files = response.data.files.map(obj => {
                 if (obj.directory) {
                     delete obj.directory;
-                let childrenNotLoaded = consts.CHILDREN_NOT_LOADED;
-            childrenNotLoaded[0]['id'] = childrenNotLoaded[0]['name'];
+                    let childrenNotLoaded = consts.CHILDREN_NOT_LOADED;
+                    childrenNotLoaded[0]['id'] = childrenNotLoaded[0]['name'];
                     obj['children'] = childrenNotLoaded;
                     obj['loading'] = true;
                 } else {
@@ -142,7 +142,7 @@ class App extends React.Component {
         let filesCopy = _.cloneDeep(this.state.editorFiles);
         let filePath = target.children[0].id;
         let pathList = filePath.split('/');
-        let renameNode = this.getNodeFromPathList(
+        let renameNode = utils.getNodeFromPathList(
             filesCopy,
             pathList,
         );
@@ -156,7 +156,7 @@ class App extends React.Component {
         e.stopPropagation();
         let filePath = target.children[0].id;
         let pathList = filePath.split('/');
-        let delNode = this.getNodeFromPathList(
+        let delNode = utils.getNodeFromPathList(
             this.state.editorFiles,
             pathList,
         );
@@ -170,7 +170,7 @@ class App extends React.Component {
         })
         .then(response => {
             let filesCopy = _.cloneDeep(this.state.editorFiles);
-            let delNode = this.getNodeFromPathList(filesCopy, pathList);
+            let delNode = utils.getNodeFromPathList(filesCopy, pathList);
             if ('directory' in delNode) {
                 _.remove(
                     delNode.directory.children,
@@ -185,7 +185,7 @@ class App extends React.Component {
             }
             clearTimeout(this.state.autosaveTimer);
             if (!_.isEmpty(this.state.editorCursor) && !delNode.active) {
-                this.getNodeFromPathList(
+                utils.getNodeFromPathList(
                     filesCopy,
                     utils.getNodePathList(this.state.editorCursor),
                 ).active = false;
@@ -200,6 +200,7 @@ class App extends React.Component {
         .catch(error => {
             if (error.response !== undefined) {
                 console.log(error.response);
+                console.log(error.response.data);
             }
         });
     }
@@ -212,7 +213,7 @@ class App extends React.Component {
 
     handleNewFileName(node, name) {
         let filesCopy = _.cloneDeep(this.state.editorFiles);
-        let nodeCopy = this.getNodeFromPathList(
+        let nodeCopy = utils.getNodeFromPathList(
             filesCopy,
             utils.getNodePathList(node),
         );
@@ -272,6 +273,11 @@ class App extends React.Component {
             nodeCopy['untitled'] = false;
             nodeCopy['name'] = name;
             nodeCopy['project'] = this.state.project;
+            if ('parent' in nodeCopy) {
+                nodeCopy['id'] = nodeCopy['parent'].id + '/' + name;
+            } else {
+                nodeCopy['id'] = name;
+            }
 
             // TODO: actually check the number of lib dirs
             let libraryDirs;
@@ -314,7 +320,7 @@ class App extends React.Component {
             let newFilename = this.state.editorFilename;
             let newCursor = this.state.editorCursor;
             if (!_.isEmpty(this.state.editorCursor)) {
-                let cursorMaybe = this.getNodeFromPathList(
+                let cursorMaybe = utils.getNodeFromPathList(
                     filesCopy,
                     utils.getNodePathList(this.state.editorCursor));
                 if (this.state.editorCursor.name !== cursorMaybe.name) {
@@ -360,9 +366,9 @@ class App extends React.Component {
         // TODO: only if file changed
         clearInterval(this.state.autosaveTimer);
         let filesCopy = _.cloneDeep(this.state.editorFiles);
-        let nodeCopy = this.getNodeFromPathList(
+        let nodeCopy = utils.getNodeFromPathList(
             filesCopy, utils.getNodePathList(node));
-        let oldCursorCopy = this.getNodeFromPathList(
+        let oldCursorCopy = utils.getNodeFromPathList(
             filesCopy, utils.getNodePathList(this.state.editorCursor));
         let newCursorCopy = this.state.editorCursor;
 
@@ -387,11 +393,11 @@ class App extends React.Component {
     }
 
     handleNewFile(e, data, target) {
+        // if data is undefined, a top-level file is being created
         let action;
         if (data === undefined) {
             action = e;
         } else {
-            e.stopPropagation();
             action = data.action;
         }
         if (!_.find(['new-file', 'new-directory'],
@@ -420,9 +426,13 @@ class App extends React.Component {
         let fileIndex;
         if (data === undefined) {
             siblingList = filesCopy;
+            nodeCopy['id'] = consts.UNNAMED_FILE_ID;
+            if ('children' in nodeCopy) {
+                nodeCopy.children[0].id = nodeCopy.id + '/' + nodeCopy.children[0].name;
+            }
         } else {
             let pathList = target.children[0].id.split('/');
-            let newParent = this.getNodeFromPathList(filesCopy, pathList);
+            let newParent = utils.getNodeFromPathList(filesCopy, pathList);
             siblingList = newParent.children;
             if (!newParent.toggled) {
                 newParent.toggled = true;
@@ -433,6 +443,10 @@ class App extends React.Component {
             if (newParent.empty) {
                 newParent.empty = false;
                 siblingList.length = 0;
+            }
+            nodeCopy['id'] = newParent.id + '/' + consts.UNNAMED_FILE_ID;
+            if ('children' in nodeCopy) {
+                nodeCopy.children[0].id = nodeCopy.id + '/' + nodeCopy.children[0].name;
             }
         }
         if (action === 'new-file') {
@@ -570,28 +584,11 @@ class App extends React.Component {
         return tokens[tokens.length - 1];
     }
 
-    getNodeFromPathList(rootList, pathList) {
-        let currentNode;
-        let currentChildren = rootList;
-        for (let i = 0; i < pathList.length; i++) {
-            let entry = pathList[i];
-            for (let j = 0; j < currentChildren.length; j++) {
-                let child = currentChildren[j];
-                if (child['name'] === entry) {
-                    currentNode = child;
-                    currentChildren = child.children;
-                    break;
-                } 
-            }
-        } 
-        return currentNode;
-    }
-
     treeChange(nodes) {
         this.setState({editorFiles: nodes});
     }
 
-    fetchDirectoryContents(node) {
+    fetchDirectoryContents(node, cb) {
         let pathList = utils.getNodePathList(node);
         
         axios.post(
@@ -604,12 +601,12 @@ class App extends React.Component {
         )
         .then(response => {
             let filesCopy = _.cloneDeep(this.state.editorFiles);
-            let nodeCopy = this.getNodeFromPathList(filesCopy, pathList);
+            let nodeCopy = utils.getNodeFromPathList(filesCopy, pathList);
             if (response.data.length !== 0) {
                 let files = response.data.map(obj => {
                     if (obj.directory) {
                     let childrenNotLoaded = consts.CHILDREN_NOT_LOADED;
-                childrenNotLoaded[0]['id'] = childrenNotLoaded[0]['name'];
+                    childrenNotLoaded[0]['id'] = childrenNotLoaded[0]['name'];
                         obj['children'] = childrenNotLoaded;
                         obj['loading'] = true;
                         obj['directory'] = node;
@@ -620,18 +617,22 @@ class App extends React.Component {
                         obj['library'] = true;
                         obj['readOnly'] = true;
                     }
-            obj['id'] = nodeCopy['id'] + '/' + obj['name'];
+                    obj['id'] = nodeCopy['id'] + '/' + obj['name'];
                     return obj;
                 });
                 nodeCopy['children'] = files;
             } else {
                 nodeCopy['empty'] = true;
-        let noChildren = consts.NO_CHILDREN;
-        noChildren[0]['id'] = nodeCopy['id'] + '/' + noChildren['name'];
+                let noChildren = consts.NO_CHILDREN;
+                noChildren[0]['id'] = nodeCopy['id'] + '/' + noChildren['name'];
                 nodeCopy['children'] = noChildren;
             }
             nodeCopy['loading'] = false;
-            this.setState({editorFiles: filesCopy});
+            this.setState({editorFiles: filesCopy}, () => {
+                if (cb) {
+                    cb();
+                }
+            });
         })
         .catch(error => {
             console.log(error);

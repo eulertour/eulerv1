@@ -113,11 +113,7 @@ class Module(models.Model):
         )
 
     def delete(self):
-        backend_directory = os.path.dirname(os.path.realpath(sys.argv[0]))
-        if os.path.basename(backend_directory) != "backend":
-            raise Exception("path error: not deleting for safety")
         module_file_path = os.path.join(
-            backend_directory,
             settings.MEDIA_ROOT,
             self.source.name,
         )

@@ -21,3 +21,4 @@ export const DEFAULT_LOGS =  'Logs will be displayed here';
 export const DEFAULT_SELECTED_SCENE = 'No Scene selected';
 export const NO_CHILDREN = [{name: '(empty)', empty: true, readOnly: true}];
 export const CHILDREN_NOT_LOADED = [{name: '(loading...)', empty: true, readOnly: true}];
+export const UNNAMED_FILE_ID = 'unnamed';

@@ -43,99 +43,17 @@ library.add(
     faFolderOpen
 );
 
-const beardstyle = {
-    tree: {
-        base: {
-            width: 'fit-content',
-            minWidth: '100%',
-            listStyle: 'none',
-            backgroundColor: '#fbfbfb',
-            marginTop: '3px',
-            marginLeft: '11px',
-            padding: 0,
-            color: 'black',
-            fontFamily: 'Lato, sans-serif',
-        },
-        node: {
-            base: {
-                position: 'relative',
-            },
-            link: {
-                cursor: 'pointer',
-                position: 'relative',
-                padding: '0px 5px',
-                display: 'flex',
-                fill: '#b43daf',
-            },
-            activeLink: {
-                backgroundColor: '#b43daf',
-                color: 'white',
-                fill: 'white',
-            },
-            toggle: {
-                base: {
-                    position: 'relative',
-                    display: 'flex',
-                    alignItems: 'center',
-                    marginRight: '7px',
-                },
-                wrapper: {},
-                height: 12,
-                width: 12,
-                arrow: {
-                    strokeWidth: 0
-                }
-            },
-            header: {
-                base: {
-                    display: 'inline-block',
-                    fontSize: '14px',
-                    verticalAlign: 'top',
-                },
-                connector: {
-                    width: '2px',
-                    height: '12px',
-                    borderLeft: 'solid 2px black',
-                    borderBottom: 'solid 2px black',
-                    position: 'absolute',
-                    top: '0px',
-                    left: '-21px'
-                },
-                title: {
-                    lineHeight: '24px',
-                    verticalAlign: 'middle'
-                }
-            },
-            subtree: {
-                listStyle: 'none',
-                paddingLeft: '19px'
-            },
-            loading: {
-                color: '#E2C089'
-            },
-        }
-    }
-};
-
-const treeNodeStyle = {
-};
-
-class TreeExample extends React.Component {
+class TreeExample extends React.PureComponent {
     constructor(props){
         super(props);
         this.state = {
             animating: false,
             newFileName: "",
+            expandedKeys: [],
         };
     }
 
     componentDidUpdate() {
-        if (!this.props.animating) {
-            this.focusInput();
-        }
-    }
-
-    focusInput() {
         if (this.nameInput) {
             this.nameInput.focus();
         }
@@ -148,37 +66,204 @@ class TreeExample extends React.Component {
 
     renderTreeNodes(data) {
         return data.map((node) => {
-            let iconComponent;
-            let iconName;
-            let iconPrefix = "fas";
-            let className = "tree-text-container";
-            if (!('children' in node) && node.empty) {
-                iconComponent = null;
-            } else {
-                if ('children' in node) {
-                    iconName = "folder";
-                } else {
-                    className += " tree-left-pad";
-                    if (node.name.endsWith(".py")) {
-                        iconPrefix = "fab";
-                        iconName = "python";
-                    } else if (node.name.endsWith(".tex")) {
-                        iconName = "superscript";
-                    } else {
-                        iconName = "align-left";
-                    }
-                }
-                iconComponent = (
-                    <FontAwesomeIcon
-                        className="tree-icon"
-                        icon={[iconPrefix, iconName]}
+            let title;
+            let iconComponent = null;
+            if (node.untitled) {
+                title = (
+                    <input
+                        ref={(input) => {this.nameInput = input}}
+                        value={this.state.newFileName}
+                        onChange={(event) => {
+                            this.setState({newFileName: event.target.value});
+                        }}
+                        onKeyDown={(event) => {
+                            if (event.keyCode === 13) {
+                                this.nameNewFile(node);
+                            }
+                        }}
+                        onBlur={() => {
+                            this.nameNewFile(node);
+                        }}
                     />
+                );
+            } else {
+                let color = 'black';
+                if (node.readOnly) {
+                    color = '#666666';
+                }
+                let iconName;
+                let iconPrefix = "fas";
+                let className = "tree-text-container";
+                if (!('children' in node) && node.empty) {
+                    iconComponent = null;
+                } else {
+                    if ('children' in node) {
+                        iconName = "folder";
+                    } else {
+                        className += " tree-left-pad";
+                        if (node.name.endsWith(".py")) {
+                            iconPrefix = "fab";
+                            iconName = "python";
+                        } else if (node.name.endsWith(".tex")) {
+                            iconName = "superscript";
+                        } else {
+                            iconName = "align-left";
+                        }
+                    }
+                    iconComponent = (
+                        <FontAwesomeIcon
+                            className="tree-icon"
+                            icon={[iconPrefix, iconName]}
+                            style={{color: color}}
+                        />
+                    );
+                }
+                let newFile;
+                let newDir;
+                let rename;
+                let del;
+                if (!node.library && !(node.empty && !node.children)) {
+                    if ('children' in node) {
+                        newFile = (
+                            <React.Fragment>
+                                <MenuItem
+                                    data={{action: 'new-file'}}
+                                    onClick={(e, data, target) => {
+                                        let expandedKey = target.children[0].id;
+                                        let nodeNotExpanded = (
+                                            _.findIndex(
+                                                this.state.expandedKeys,
+                                                (key) => {return key === expandedKey}
+                                            ) === -1
+                                        );
+                                        if (nodeNotExpanded) {
+                                            let clickedNode = utils.getNodeFromPathList(
+                                                this.props.files,
+                                                target.children[0].id.split('/'),
+                                            );
+                                            let expandAndCreateNewFile = () => {
+                                                let newExpandedKeys = _.clone(this.state.expandedKeys);
+                                                newExpandedKeys.push(expandedKey);
+                                                this.setState(
+                                                    {expandedKeys: newExpandedKeys},
+                                                    () => {this.props.onNewFile(e, data, target)},
+                                                );
+                                            }
+                                            if (clickedNode.loading) {
+                                                this.props.onDirFetch(
+                                                    clickedNode,
+                                                    expandAndCreateNewFile,
+                                                );
+                                            } else {
+                                                expandAndCreateNewFile();
+                                            }
+                                        } else {
+                                            this.props.onNewFile(e, data, target);
+                                        }
+                                    }}>
+                                    <FontAwesomeIcon
+                                        className="menu-icon"
+                                        icon={["fas", "file"]}
+                                    />
+                                    New File
+                                </MenuItem>
+                                <MenuItem divider />
+                            </React.Fragment>
+                        );
+                        newDir = (
+                            <React.Fragment>
+                                <MenuItem
+                                    data={{action: 'new-directory'}}
+                                    onClick={(e, data, target) => {
+                                        let expandedKey = target.children[0].id;
+                                        let nodeNotExpanded = (
+                                            _.findIndex(
+                                                this.state.expandedKeys,
+                                                (key) => {return key === expandedKey}
+                                            ) === -1
+                                        );
+                                        if (nodeNotExpanded) {
+                                            let clickedNode = utils.getNodeFromPathList(
+                                                this.props.files,
+                                                target.children[0].id.split('/'),
+                                            );
+                                            let expandAndCreateNewFile = () => {
+                                                let newExpandedKeys = _.clone(this.state.expandedKeys);
+                                                newExpandedKeys.push(expandedKey);
+                                                this.setState(
+                                                    {expandedKeys: newExpandedKeys},
+                                                    () => {this.props.onNewFile(e, data, target)},
+                                                );
+                                            }
+                                            if (clickedNode.loading) {
+                                                this.props.onDirFetch(
+                                                    clickedNode,
+                                                    expandAndCreateNewFile,
+                                                );
+                                            } else {
+                                                expandAndCreateNewFile();
+                                            }
+                                        } else {
+                                            this.props.onNewFile(e, data, target);
+                                        }
+                                    }}>
+                                    <FontAwesomeIcon
+                                        className="menu-icon"
+                                        icon={["fas", "folder-open"]}
+                                    />
+                                    New Folder
+                                </MenuItem>
+                                <MenuItem divider />
+                            </React.Fragment>
+                        );
+                    }
+                    rename = (
+                        <React.Fragment>
+                            <MenuItem
+                                data={{action: 'rename'}}
+                                onClick={this.props.onFileRename}>
+                                <FontAwesomeIcon
+                                    className="menu-icon"
+                                    icon={["fas", "pencil-alt"]}
+                                />
+                                Rename
+                            </MenuItem>
+                            <MenuItem divider />
+                        </React.Fragment>
+                    );
+                    del = (
+                        <React.Fragment>
+                            <MenuItem
+                                data={{action: 'delete'}}
+                                onClick={this.props.onFileDelete}>
+                                <FontAwesomeIcon
+                                    className="menu-icon"
+                                    icon={["fas", "trash"]}
+                                />
+                                Delete
+                            </MenuItem>
+                        </React.Fragment>
+                    );
+                }
+                let path = utils.getNodePathList(node).join('/');
+                title = (
+                    <span style={{color: color}}>
+                        <ContextMenuTrigger id={path}>
+                            <span id={path}>{node.name}</span>
+                        </ContextMenuTrigger>
+                        <ContextMenu id={path}>
+                            {newFile}
+                            {newDir}
+                            {rename}
+                            {del}
+                        </ContextMenu>
+                    </span>
                 );
             }
             if (node.children) {
                 return (
                     <TreeNode
-                        title={node.name}
+                        title={title}
                         key={node.id}
                         dataRef={node}
                         icon={iconComponent}
@@ -188,13 +273,15 @@ class TreeExample extends React.Component {
                     </TreeNode>
                 );
             }
-            return <TreeNode
-                title={node.name}
-                key={node.id}
-                dataRef={node}
-                icon={iconComponent}
-                isLeaf={true}
-            />;
+            return (
+                <TreeNode
+                    title={title}
+                    key={node.id}
+                    dataRef={node}
+                    icon={iconComponent}
+                    isLeaf={true}
+                />
+            );
         });
     }
 
@@ -418,6 +505,10 @@ class TreeExample extends React.Component {
                             loadData={this.onLoadData}
                             onSelect={(value, e, extra) => {
                                 this.props.onFileFetch(e.node.props.dataRef);
+                            }}
+                            expandedKeys={this.state.expandedKeys}
+                            onExpand={(expandedKeys) => {
+                                this.setState({expandedKeys});
                             }}
                         >
                             {this.renderTreeNodes(this.props.files)}
