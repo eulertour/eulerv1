@@ -1,3 +1,5 @@
+import 'antd/dist/antd.css';
+import './App.css';
 import React from 'react';
 import { withRouter, NavLink } from 'react-router-dom';
 import { instanceOf } from 'prop-types';
@@ -6,7 +8,6 @@ import axios from 'axios';
 import NotVideo from './components/notvideo.jsx';
 import * as consts from './constants.js';
 import Editor from './components/editor.jsx';
-import './App.css';
 import logo from './assets/etourlogo.jpg';
 import anonymousUser from './assets/icon-name-active@3x.svg';
 import fileImage from './assets/icon-file@3x.svg';
@@ -14,8 +15,6 @@ import _ from 'lodash';
 import Login from './components/login.jsx';
 import closeIcon from './assets/e-remove.svg';
 import * as utils from './utils.js';
-import 'react-virtualized/styles.css';
-import 'react-virtualized-tree/lib/main.css';
 import 'material-icons/css/material-icons.css';
 import 'material-icons/iconfont/material-icons.css';
 
@@ -927,8 +926,8 @@ class App extends React.Component {
                             />
                             <div className="banner-text">
                                 EulerTour
+                                <sup className="release">&alpha;</sup>
                             </div>
-                            <sup className="release">&alpha;</sup>
                         </div>
                     </NavLink>
                     {this.props.username}

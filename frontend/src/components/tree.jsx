@@ -430,16 +430,3 @@ class TreeExample extends React.Component {
 }
 
 export default TreeExample;
-
-// <Treebeard
-//     data={this.props.files}
-//     onToggle={(node, toggled) => {
-//         if ('toggled' in node && node.toggled !== toggled) {
-//             this.setState({animating: true});
-//         }
-//         this.props.onToggle(node, toggled);
-//     }}
-//     style={style}
-//     decorators={decorators}
-//     animations={false}
-// />

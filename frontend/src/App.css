@@ -1,5 +1,14 @@
 @import url('https://fonts.googleapis.com/css?family=Lato');
-@import '~antd/dist/antd.css';
+
+body {
+  line-height: 1.2;
+  color: black;
+}
+
+sup {
+  font-size: 65%;
+  top: -0.7em;
+}
 
 .page-container {
   background-color: #f1f1f1;
@@ -29,7 +38,6 @@
 }
 
 .banner-logo {
-  max-width: 60px;
   max-height: 60px;
   padding-left: 8px;
 }
@@ -40,7 +48,6 @@
 }
 
 .release {
-  margin-top: 10px;
   color: #aaa;
 }
 
@@ -267,8 +274,11 @@
   overflow: auto;
 }
 
+.tree-container .ant-tree {
+  padding: 5px 0 0 5px;
+}
+
 .tree-container .ant-tree li {
-  font-size: 15px;
   padding: 0;
 }
 
@@ -431,28 +441,11 @@
   margin: 0;
 }
 
-.react-codemirror2 {
-  height: calc(100% - 31px);
-}
-
 .card {
   box-shadow: 2px 6px 10px 0 rgba(115,143,147,.4);
   border-top: 1px solid #e7eeef;
   border-bottom: 1px solid #b7c9cc;
 
-}
-
-.CodeMirror {
-  /* Set height, width, borders, and global font properties here */
-  font-family: monospace;
-  font-size: 9pt;
-  color: black;
-  direction: ltr;
-  height: 100%;
-}
-
-.CodeMirror-overlayscroll-horizontal div, .CodeMirror-overlayscroll-vertical div {
-  background: #ddd;
 }
 
 .rename-button {

@@ -15,6 +15,7 @@ require('codemirror/mode/xml/xml.js');
 require('codemirror/mode/python/python.js');
 require('codemirror/addon/scroll/simplescrollbars.js');
 require('codemirror/addon/scroll/simplescrollbars.css');
+require('./Editor.css');
 
 library.add(faEraser);
 
