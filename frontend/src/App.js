@@ -213,8 +213,7 @@ class App extends React.Component {
         })
         .catch(error => {
             if (error.response !== undefined) {
-                console.log(error.response);
-                console.log(error.response.data);
+                console.log('error deleting file');
             }
         });
     }
@@ -563,7 +562,6 @@ class App extends React.Component {
             if ('response' in error && error.response !== undefined
                 && 'data' in error.response) {
                 let data = error.response.data;
-                console.log(data);
                 if (error.response.status === 401 &&
                     data.code === 'token_not_valid' &&
                     data.detail === 'Given token not valid for any token type') {
@@ -810,7 +808,6 @@ class App extends React.Component {
             }
         })
         .catch(error => {
-            console.log(error.response);
             if (error.response !== undefined &&
                 error.response.status === 401) {
                 this.setState({showLoginModal: true});
