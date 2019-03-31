@@ -9,32 +9,32 @@ services:
     build:
       context: backend/
       args:
-        - domain=${DOMAIN:?No domain specified}
+        - domain=${DOMAIN:?DOMAIN environment variable isn't set}
     ports:
       - 8000:8000
     volumes:
-      - ${FRONTEND_CONFIG_PATH:?No frontend path specified}/keys:/var/keys
-      - ${BACKEND_DATA_PATH:?No data path specified}:/srv/data
+      - ${FRONTEND_CONFIG_PATH:?FRONTEND_CONFIG_PATH environment variable isn't set}/keys:/var/keys
+      - ${BACKEND_DATA_PATH:?BACKEND_DATA_PATH environment variable isn't set}:/srv/data
     depends_on:
       - db
     environment:
-      - DJANGO_MEDIA_ROOT=${BACKEND_DATA_PATH:?No data path specified}
+      - DJANGO_MEDIA_ROOT=${BACKEND_DATA_PATH:?BACKEND_DATA_PATH environment variable isn't set}
   frontend:
     build:
       context: frontend/
       args:
-        - domain=${DOMAIN:?No domain specified}
+        - domain=${DOMAIN:?DOMAIN environment variable isn't set}
     cap_add:
       - NET_ADMIN
     environment:
       - TZ=America/Los_Angeles
-      - URL=${DOMAIN:?No domain specified}
+      - URL=${DOMAIN:?DOMAIN environment variable isn't set}
       - SUBDOMAINS=www,api,media
       - EMAIL=devin@eulertour.com
-      - REACT_APP_DOMAIN=${DOMAIN:?No domain specified}
+      - REACT_APP_DOMAIN=${DOMAIN:?DOMAIN environment variable isn't set}
     volumes:
-      - ${FRONTEND_CONFIG_PATH:?No frontend path specified}:/config
-      - ${BACKEND_DATA_PATH:?No data path specified}:/srv/data
+      - ${FRONTEND_CONFIG_PATH:?FRONTEND_CONFIG_PATH environment variable isn't set}:/config
+      - ${BACKEND_DATA_PATH:?BACKEND_DATA_PATH environment variable isn't set}:/srv/data
     ports:
       - 80:80
       - 443:443
