@@ -167,6 +167,7 @@ class Editor extends Component {
                             files={this.props.files}
                             cursor={this.props.cursor}
                             animating={this.props.animating}
+                            expandedKeys={this.props.expandedKeys}
 
                             onAnimationComplete={this.props.onAnimationComplete}
                             onFileDelete={this.props.onFileDelete}
@@ -178,6 +179,7 @@ class Editor extends Component {
                             onTreeToggle={this.handleTreeToggle}
 
                             onTreeChange={this.props.onTreeChange}
+                            onTreeExpand={this.props.onTreeExpand}
                             onFileFetch={this.props.onFileFetch}
                             onDirFetch={this.props.onDirFetch}
                         />

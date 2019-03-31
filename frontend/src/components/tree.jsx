@@ -31,10 +31,9 @@ class TreeExample extends React.PureComponent {
     constructor(props, context) {
         super(props);
         this.state = {
-            animating: false,
             newFileName: "",
-            expandedKeys: [],
             menuNode: {},
+            lockNode: {},
         };
         this.handleMenuClick = this.handleMenuClick.bind(this);
     }
@@ -49,7 +48,7 @@ class TreeExample extends React.PureComponent {
         let expandedKey = data.node.id;
         let nodeNotExpanded = (
             _.findIndex(
-                this.state.expandedKeys,
+                this.props.expandedKeys,
                 (key) => {return key === expandedKey}
             ) === -1
         );
@@ -59,10 +58,10 @@ class TreeExample extends React.PureComponent {
                 expandedKey.split('/'),
             );
             let expandAndCreateNewFile = () => {
-                let newExpandedKeys = _.clone(this.state.expandedKeys);
+                let newExpandedKeys = _.clone(this.props.expandedKeys);
                 newExpandedKeys.push(expandedKey);
-                this.setState(
-                    {expandedKeys: newExpandedKeys},
+                this.props.onTreeExpand(
+                    newExpandedKeys,
                     () => {this.props.onNewFile(e, data, target)},
                 );
             }
@@ -138,7 +137,26 @@ class TreeExample extends React.PureComponent {
                 }
                 let path = utils.getNodePathList(node).join('/');
                 title = (
-                    <span id={path} style={{color: color}}>{node.name}</span>
+                    <span
+                        id={path}
+                        style={{color: color}}
+                        onMouseOver={() => {
+                            if (this.state.nodeLock) {
+                                this.setState({lockNode: node});
+                            } else {
+                                this.setState({menuNode: node});
+                            }
+                        }}
+                        onMouseOut={() => {
+                            if (this.state.nodeLock) {
+                                this.setState({lockNode: {}});
+                            } else {
+                                this.setState({menuNode: {}});
+                            }
+                        }}
+                    >
+                        {node.name}
+                    </span>
                 );
             }
             if (node.children) {
@@ -215,7 +233,11 @@ class TreeExample extends React.PureComponent {
                 </div>
                 <div className="tree-container">
                     <PerfectScrollbar>
-                        <ContextMenuTrigger id={consts.MENU_ID}>
+                        <ContextMenuTrigger
+                            id={consts.MENU_ID}
+                            collect={p => p}
+                            menuNode={this.state.menuNode}
+                        >
                             <Tree
                                 showIcon
                                 switcherIcon={<Icon
@@ -230,21 +252,25 @@ class TreeExample extends React.PureComponent {
                                 onSelect={(value, e, extra) => {
                                     this.props.onFileFetch(e.node.props.dataRef);
                                 }}
-                                expandedKeys={this.state.expandedKeys}
+                                expandedKeys={this.props.expandedKeys}
                                 onExpand={(expandedKeys) => {
-                                    this.setState({expandedKeys});
-                                }}
-                                onRightClick={(obj) => {
-                                    this.setState({
-                                        menuNode: obj.node.props.dataRef,
-                                    });
+                                    this.props.onTreeExpand(expandedKeys);
                                 }}
                             >
                                 {this.renderTreeNodes(this.props.files)}
                             </Tree>
                         </ContextMenuTrigger>
                         <FileMenu
-                            node={this.state.menuNode}
+                            menuNode={this.state.menuNode}
+                            onShow={() => {
+                                this.setState({nodeLock: true});
+                            }}
+                            onHide={() => {
+                                this.setState({
+                                    nodeLock: false,
+                                    menuNode: this.state.lockNode,
+                                })
+                            }}
                             onMenuClick={this.handleMenuClick}
                             onFileRename={this.props.onFileRename}
                             onFileDelete={this.props.onFileDelete}

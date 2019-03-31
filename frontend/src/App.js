@@ -35,6 +35,8 @@ class App extends React.Component {
             editorSceneInput: "",
             editorRenderStatus: "",
 
+            treeExpandedKeys: [],
+
             videoError: consts.DEFAULT_LOGS,
             videoFile: "",
             videoReturncode: -1,
@@ -73,6 +75,11 @@ class App extends React.Component {
         this.resetProject = this.resetProject.bind(this);
 
         this.treeChange = this.treeChange.bind(this);
+        this.handleTreeExpand = this.handleTreeExpand.bind(this);
+    }
+
+    handleTreeExpand(expandedKeys, cb) {
+        this.setState({treeExpandedKeys: expandedKeys}, cb);
     }
 
     handleProjectReset() {
@@ -113,7 +120,7 @@ class App extends React.Component {
         })
         .catch(error => {
             if (error.response !== undefined &&
-                error.response.statusText === 'Unauthorized') {
+                error.response.status === 401) {
                 this.setState({showLoginModal: true});
             }
         });
@@ -188,11 +195,20 @@ class App extends React.Component {
                     utils.getNodePathList(this.state.editorCursor),
                 ).active = false;
             }
+            let expandedKeysCopy = []
+            for (let i = 0; i < this.state.treeExpandedKeys.length; i++) {
+                if (this.state.treeExpandedKeys[i].startsWith(delNode.id + '/') ||
+                    this.state.treeExpandedKeys[i] === delNode.id) {
+                    continue;
+                }
+                expandedKeysCopy.push(this.state.treeExpandedKeys[i]);
+            }
             this.setState({
                 editorFiles: filesCopy,
                 editorFilename: "",
                 editorCode: "",
                 editorCursor: {},
+                treeExpandedKeys: expandedKeysCopy,
             });
         })
         .catch(error => {
@@ -207,6 +223,21 @@ class App extends React.Component {
         return accessToken.length !== 0 ?
             {'Authorization': 'Bearer ' + this.props.access} :
             {};
+    }
+
+    changeSubtreeIds(node, oldIdPrefix, newIdPrefix) {
+        if ('id' in node && node.id.startsWith(oldIdPrefix)) {
+            node.id = newIdPrefix + node.id.slice(oldIdPrefix.length);
+        }
+        if ('children' in node) {
+            for (let i = 0; i < node.children.length; i++) {
+                this.changeSubtreeIds(
+                    node.children[i],
+                    oldIdPrefix,
+                    newIdPrefix,
+                );
+            }
+        }
     }
 
     handleNewFileName(node, name) {
@@ -271,14 +302,47 @@ class App extends React.Component {
             data,
             {headers: this.getHeadersDict(this.props.access)},
         )
+        .catch(error => {
+            if (node.name === undefined) {
+                if (siblingList.length === 1) {
+                    nodeCopy.directory.empty = true;
+                    nodeCopy.directory.children = consts.NO_CHILDREN;
+                } else {
+                    _.remove(siblingList, (o) => {return _.isEqual(o, node)});
+                }
+            } else {
+                nodeCopy.untitled = false;
+            }
+            this.setState({editorFiles: filesCopy});
+            if (error.response !== undefined &&
+                error.response.status === 401) {
+                this.setState({showLoginModal: true});
+            }
+            if (error.response !== undefined &&
+                error.response.status === 400) {
+                console.log(error.response.data.error);
+                // they probably gave an illegal filename
+                this.setState({});
+            }
+        })
         .then(response => {
             nodeCopy['untitled'] = false;
             nodeCopy['name'] = name;
             nodeCopy['project'] = this.state.project;
+            let oldId = nodeCopy.id;
+            let newId;
             if ('directory' in nodeCopy) {
-                nodeCopy['id'] = nodeCopy['directory'].id + '/' + name;
+                newId = nodeCopy['directory'].id + '/' + name;
             } else {
-                nodeCopy['id'] = name;
+                newId = name;
+            }
+            this.changeSubtreeIds(nodeCopy, oldId, newId);
+            let expandedKeysCopy = _.cloneDeep(this.state.treeExpandedKeys);
+            for (let i = 0; i < expandedKeysCopy.length; i++) {
+                if (expandedKeysCopy[i].startsWith(oldId + '/') ||
+                    expandedKeysCopy[i] === oldId) {
+                    expandedKeysCopy[i] = nodeCopy.id + expandedKeysCopy[i].slice(oldId.length);
+                }
             }
 
             // TODO: actually check the number of lib dirs
@@ -307,7 +371,6 @@ class App extends React.Component {
                     return 0;
             };
             if ('children' in node) {
-                nodeCopy['empty'] = true;
                 dirArray = dirArray.sort(nodeSort);
             } else {
                 fileArray = fileArray.sort(nodeSort);
@@ -334,30 +397,11 @@ class App extends React.Component {
                 editorFiles: filesCopy,
                 editorFilename: newFilename,
                 editorCursor: newCursor,
+                treeExpandedKeys: expandedKeysCopy,
             });
         })
         .catch(error => {
-            if (node.name === undefined) {
-                if (siblingList.length === 1) {
-                    nodeCopy.directory.empty = true;
-                    nodeCopy.directory.children = consts.NO_CHILDREN;
-                } else {
-                    _.remove(siblingList, (o) => {return _.isEqual(o, node)});
-                }
-            } else {
-                nodeCopy.untitled = false;
-            }
-            this.setState({editorFiles: filesCopy});
-            if (error.response !== undefined &&
-                error.response.statusText === 'Unauthorized') {
-                this.setState({showLoginModal: true});
-            }
-            if (error.response !== undefined &&
-                error.response.status === 400) {
-                console.log(error.response.data.error);
-                // they probably gave an illegal filename
-                this.setState({});
-            }
+            console.log(error);
         });
     }
 
@@ -400,8 +444,9 @@ class App extends React.Component {
 
     handleNewFile(e, data, target) {
         // if data is undefined, a top-level file is being created
+        let isTopLevel = (data === undefined);
         let action;
-        if (data === undefined) {
+        if (isTopLevel) {
             action = e;
         } else {
             action = data.action;
@@ -430,7 +475,7 @@ class App extends React.Component {
         }
         let siblingList;
         let fileIndex;
-        if (data === undefined) {
+        if (isTopLevel) {
             siblingList = filesCopy;
             nodeCopy['id'] = consts.UNNAMED_FILE_ID;
             if ('children' in nodeCopy) {
@@ -554,7 +599,7 @@ class App extends React.Component {
             consts.GET_FILES_URL,
             {
                 project: node.project,
-                pathList: utils.getNodePathList(node),
+                pathList: node.id.split('/'),
             },
             {headers: this.getHeadersDict(this.props.access)},
         )
@@ -595,7 +640,7 @@ class App extends React.Component {
     }
 
     fetchDirectoryContents(node, cb) {
-        let pathList = utils.getNodePathList(node);
+        let pathList = node.id.split('/');
         
         axios.post(
             consts.GET_FILES_URL,
@@ -740,8 +785,8 @@ class App extends React.Component {
             }
         })
         .catch(error => {
-            if (error.response !==  undefined &&
-                error.response.statusText === 'Unauthorized') {
+            if (error.response !== undefined &&
+                error.response.status === 401) {
                 console.log('not authenticated');
             }
         });
@@ -765,8 +810,9 @@ class App extends React.Component {
             }
         })
         .catch(error => {
-            if (error.response !==  undefined &&
-                error.response.statusText === 'Unauthorized') {
+            console.log(error.response);
+            if (error.response !== undefined &&
+                error.response.status === 401) {
                 this.setState({showLoginModal: true});
             }
         });
@@ -801,7 +847,7 @@ class App extends React.Component {
         })
         .catch(error => {
             if (error.response !== undefined &&
-                error.response.statusText === 'Unauthorized') {
+                error.response.status === 401) {
                 this.setState({showLoginModal: true});
             }
             if (error.response !== undefined &&
@@ -962,6 +1008,7 @@ class App extends React.Component {
                         renderStatus={this.state.editorRenderStatus}
                         saveMessage={this.state.editorSaveMessage}
                         sceneInput={this.state.editorSceneInput}
+                        expandedKeys={this.state.treeExpandedKeys}
 
                         onAnimationComplete={this.handleAnimationComplete}
                         onCodeChange={this.handleCodeChange}
@@ -982,6 +1029,7 @@ class App extends React.Component {
                         onProjectReset={this.handleProjectReset}
 
                         onTreeChange={this.treeChange}
+                        onTreeExpand={this.handleTreeExpand}
                         onFileFetch={this.fetchFileContents}
                         onDirFetch={this.fetchDirectoryContents}
                     />
