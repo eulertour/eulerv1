@@ -29,7 +29,7 @@ def render_scene(
             "-e", "FILE_DIR=/root/project",
             "-e", "PYTHONPATH=/root/manim",
             "eulertour/manim:latest",
-            "-c", "umask 002 && cd project/source && python -m manim " +
+            "-c", "umask 002 && cd /root/project/source && python -m manim " +
                   f"{shlex.quote(input_filename)} " +
                   f"{shlex.quote(input_scene)} -l",
     ]
