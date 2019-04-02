@@ -1,6 +1,5 @@
 FROM python:3.7
 RUN apt-get update && \
-    apt-get install -qqy && \
     apt-get install -qqy python-pip && \
     python3 -m pip install rq && \
     python2 -m pip install supervisor && \
