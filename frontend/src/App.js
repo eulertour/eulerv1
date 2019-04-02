@@ -872,6 +872,9 @@ class App extends React.Component {
                     <div
                         className="banner-button logout-button"
                         onClick={this.logOut}>Log Out</div>
+                    <div className="username">
+                        {this.props.username}
+                    </div>
                     <div className="user-image-background">
                         <img
                             className="user-image"
@@ -884,22 +887,26 @@ class App extends React.Component {
         } else {
             login_info = (
                 <div className="account-info">
-                    <div className="banner-button login-button">
-                        <NavLink
-                            to={{
-                                pathname: "/login",
-                                state: {from: "/"}
-                            }}
-                            className="login">Log In</NavLink>
-                    </div>
-                    <div className="banner-button emphatic-button">
-                        <NavLink
-                            to={{
-                                pathname: "/signup",
-                                state: {from: "/"}
-                            }}
-                            id="signup-button">Sign Up</NavLink>
-                    </div>
+                    <NavLink
+                        to={{
+                            pathname: "/login",
+                            state: {from: "/"}
+                        }}
+                        className="login">
+                        <div className="banner-button login-button">
+                            Log In
+                        </div>
+                    </NavLink>
+                    <NavLink
+                        to={{
+                            pathname: "/signup",
+                            state: {from: "/"}
+                        }}
+                        id="signup-button">
+                        <div className="banner-button emphatic-button">
+                            Sign Up
+                        </div>
+                    </NavLink>
                 </div>
             )
         }
@@ -980,7 +987,6 @@ class App extends React.Component {
                             </div>
                         </div>
                     </NavLink>
-                    {this.props.username}
                     {login_info}
                 </div>
                 <div className="app-container">

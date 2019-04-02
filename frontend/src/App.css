@@ -1,5 +1,4 @@
 @import url('https://fonts.googleapis.com/css?family=Lato');
-
 body {
   line-height: 1.2;
   color: black;
@@ -19,9 +18,8 @@ sup {
 
 .header {
   margin-bottom: 20px;
-  box-shadow: 2px 6px 10px 0 rgba(115,143,147,.4);
+  box-shadow: 2px 6px 10px 0 rgba(115, 143, 147, .4);
   height: 70px;
-
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -62,7 +60,8 @@ sup {
 }
 
 .username {
-  margin-right: 8px;
+  font-weight: 700;
+  margin-right: 14px;
 }
 
 .banner-button {
@@ -70,19 +69,33 @@ sup {
   width: 105px;
   height: 37px;
   display: flex;
-  font-size: 12px;
+  font-size: 14px;
   margin-right: 14px;
   border: 1px solid #dcdcdc;
-
   justify-content: center;
   align-items: center;
   box-sizing: border-box;
+  cursor: pointer;
+  transition: background-color 0.3s ease-in-out;
 }
 
 .emphatic-button {
   background-color: #b43daf;
   color: white;
   border: none;
+}
+
+.emphatic-button:hover {
+  background-color: #8c3087;
+}
+
+.login-button {
+  color: #0e0e0e;
+  margin-right: 0;
+}
+
+.login-button:hover {
+  background-color: #e5e5e5;
 }
 
 .files-button {
@@ -95,13 +108,17 @@ sup {
   border: none;
 }
 
+.danger-button:hover {
+  background-color: #a90303;
+}
+
 .file-image {
   margin-right: 5px;
   height: 13px;
 }
 
-.logout-button {
-
+.logout-button:hover {
+  background-color: #e5e5e5;
 }
 
 .user-image-background {
@@ -127,7 +144,8 @@ sup {
 .app-container {
   display: flex;
   justify-content: space-between;
-  height: 100vh;
+  height: calc(100vh - 100px);
+  /* vh means viewport height */
   padding: 10px 15px;
   box-sizing: border-box;
   background-color: #f1f1f1;
@@ -139,7 +157,6 @@ sup {
   flex-direction: column;
   justify-content: space-between;
   flex: 1;
-
   background-color: #FFFFFF;
   border-radius: 8px;
   box-shadow: 0 2px 10px 0 rgba(0, 0, 0, 0.21);
@@ -157,9 +174,7 @@ sup {
   border-bottom: 1px solid #e7eeef;
 }
 
-.video-player {
-
-}
+.video-player {}
 
 .video-placeholder {
   background-color: #fbf5fb;
@@ -345,9 +360,8 @@ sup {
   height: 100%;
   background-color: #f7f7f7;
   border-right: 1px solid #e9e9e9;
+  cursor: pointer;
 }
-
-.expand-icon {}
 
 .collapse-button {
   display: flex;
@@ -357,9 +371,8 @@ sup {
   height: 100%;
   background-color: #f7f7f7;
   border-left: 1px solid #e9e9e9;
+  cursor: pointer;
 }
-
-.collapse-icon {}
 
 .reverse {
   -moz-transform: scaleX(-1);
@@ -379,7 +392,6 @@ sup {
   box-sizing: border-box;
   padding-left: 5px;
   padding-right: 5px;
-
   display: flex;
   justify-content: flex-start;
   align-items: center;
@@ -427,9 +439,7 @@ sup {
   margin: 10px;
 }
 
-.open-button {
-
-}
+.open-button {}
 
 .file-list {
   z-index: 7;
@@ -442,15 +452,12 @@ sup {
 }
 
 .card {
-  box-shadow: 2px 6px 10px 0 rgba(115,143,147,.4);
+  box-shadow: 2px 6px 10px 0 rgba(115, 143, 147, .4);
   border-top: 1px solid #e7eeef;
   border-bottom: 1px solid #b7c9cc;
-
 }
 
-.rename-button {
-
-}
+.rename-button {}
 
 .scene-container input {
   font-size: inherit;
@@ -469,7 +476,6 @@ sup {
 .scene-inputs {
   height: 100%;
   flex: 1;
-
   display: flex;
   justify-content: center;
   align-items: center;
@@ -521,6 +527,12 @@ sup {
   flex-basis: 125px;
   justify-content: center;
   align-items: center;
+  cursor: pointer;
+  transition: background-color 0.3s ease-in-out;
+}
+
+.render-button:hover {
+  background-color: #8c3087;
 }
 
 .render-icon {
@@ -528,22 +540,26 @@ sup {
   margin-right: 4px;
 }
 
-.scene-select {
-
-}
+.scene-select {}
 
 .modal-background {
-  position: fixed; /* Stay in place */
-  z-index: 6; /* Sit on top */
+  position: fixed;
+  /* Stay in place */
+  z-index: 6;
+  /* Sit on top */
   left: 0;
   top: 0;
-  width: 100%; /* Full width */
-  height: 100%; /* Full height */
-  overflow: auto; /* Enable scroll if needed */
-  background-color: rgb(0, 0, 0); /* Fallback color */
+  width: 100%;
+  /* Full width */
+  height: 100%;
+  /* Full height */
+  overflow: auto;
+  /* Enable scroll if needed */
+  background-color: rgb(0, 0, 0);
+  /* Fallback color */
   background-color: rgba(240, 240, 240, .6);
   display: flex;
-  justify-content: center; 
+  justify-content: center;
   align-items: center;
 }
 
@@ -646,10 +662,6 @@ input:focus {
   align-items: center;
 }
 
-.login-icon {
-
-}
-
 .login-input {
   background-color: inherit;
   border-radius: 0 5px 5px 0;
@@ -669,6 +681,8 @@ input:focus {
   display: flex;
   justify-content: center;
   align-items: center;
+  transition: background-color 0.3s ease-in-out;
+  cursor: pointer;
 }
 
 .remember-forgot {
@@ -698,6 +712,11 @@ input:focus {
   align-items: center;
   border-top: 1px solid #e9e9e9;
   width: 100%;
+  cursor: pointer;
+}
+
+.login-switch:hover {
+  text-decoration: underline;
 }
 
 .reset-modal {
@@ -733,113 +752,85 @@ input:focus {
   text-align: center;
 }
 
-.App-logo {
-  animation: App-logo-spin infinite 20s linear;
-  height: 40vmin;
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
-}
-
-.App-link {
-  color: #61dafb;
-}
-
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 .react-contextmenu-wrapper {
-    display: inline;
+  display: inline;
 }
 
 .react-contextmenu {
-    background-color: #fff;
-    background-clip: padding-box;
-    border: 1px solid rgba(0,0,0,.15);
-    border-radius: .25rem;
-    color: #373a3c;
-    font-size: 16px;
-    margin: 2px 0 0;
-    min-width: 160px;
-    outline: none;
-    opacity: 0;
-    padding: 5px 0;
-    pointer-events: none;
-    text-align: left;
-    transition: opacity 250ms ease !important;
+  background-color: #fff;
+  background-clip: padding-box;
+  border: 1px solid rgba(0, 0, 0, .15);
+  border-radius: .25rem;
+  color: #373a3c;
+  font-size: 16px;
+  margin: 2px 0 0;
+  min-width: 160px;
+  outline: none;
+  opacity: 0;
+  padding: 5px 0;
+  pointer-events: none;
+  text-align: left;
+  transition: opacity 250ms ease !important;
 }
 
 .react-contextmenu.react-contextmenu--visible {
-    opacity: 1;
-    pointer-events: auto;
-    z-index: 9999;
+  opacity: 1;
+  pointer-events: auto;
+  z-index: 9999;
 }
 
 .react-contextmenu-item {
-    background: 0 0;
-    border: 0;
-    color: #373a3c;
-	cursor: pointer;
-    font-weight: 400;
-    line-height: 1.5;
-    padding: 3px 12px;
-    text-align: inherit;
-    white-space: nowrap;
+  background: 0 0;
+  border: 0;
+  color: #373a3c;
+  cursor: pointer;
+  font-weight: 400;
+  line-height: 1.5;
+  padding: 3px 12px;
+  text-align: inherit;
+  white-space: nowrap;
 }
 
 .react-contextmenu-item.react-contextmenu-item--active,
 .react-contextmenu-item.react-contextmenu-item--selected {
-    color: #fff;
-    background-color: #20a0ff;
-    border-color: #20a0ff;
-    text-decoration: none;
+  color: #fff;
+  background-color: #20a0ff;
+  border-color: #20a0ff;
+  text-decoration: none;
 }
 
 .react-contextmenu-item.react-contextmenu-item--disabled,
 .react-contextmenu-item.react-contextmenu-item--disabled:hover {
-    background-color: transparent;
-    border-color: rgba(0,0,0,.15);
-    color: #878a8c;
+  background-color: transparent;
+  border-color: rgba(0, 0, 0, .15);
+  color: #878a8c;
 }
 
 .react-contextmenu-item--divider {
-    border-bottom: 1px solid rgba(0,0,0,.15);
-    cursor: inherit;
-    margin-bottom: 3px;
-    padding: 2px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, .15);
+  cursor: inherit;
+  margin-bottom: 3px;
+  padding: 2px 0;
 }
+
 .react-contextmenu-item--divider:hover {
-    background-color: transparent;
-    border-color: rgba(0,0,0,.15);
+  background-color: transparent;
+  border-color: rgba(0, 0, 0, .15);
 }
 
 .react-contextmenu-item.react-contextmenu-submenu {
-	padding: 0;
+  padding: 0;
 }
 
-.react-contextmenu-item.react-contextmenu-submenu > .react-contextmenu-item {
+.react-contextmenu-item.react-contextmenu-submenu>.react-contextmenu-item {}
+
+.react-contextmenu-item.react-contextmenu-submenu>.react-contextmenu-item:after {
+  content: "▶";
+  display: inline-block;
+  position: absolute;
+  right: 7px;
 }
 
-.react-contextmenu-item.react-contextmenu-submenu > .react-contextmenu-item:after {
-    content: "▶";
-    display: inline-block;
-    position: absolute;
-    right: 7px;
-}
 
 /*
 .ReactVirtualized__Grid.ReactVirtualized__List {
@@ -856,48 +847,48 @@ style = { overflow : unset }
 gridStyle = { overflow: visible }
 */
 
-.ReactVirtualized__List:focus{
-    outline: none;
+.ReactVirtualized__List:focus {
+  outline: none;
 }
 
 .tree-container {
-    height: 200px;
+  height: 200px;
 }
 
 .no-children {
-    margin-left: 20px;
+  margin-left: 20px;
 }
 
 .tree-cursor {
-    font-size: 16px;
+  font-size: 16px;
 }
 
 .tree-cursor:focus {
-    outline: none;
+  outline: none;
 }
 
 i.expanded:before {
-    display: inline-block;
-    content: "▼";
-    font-style: normal;
-    width: 20px;
-    max-width: 20px;
-    transform: translateX(-3px);
-    color: #b43daf;
+  display: inline-block;
+  content: "▼";
+  font-style: normal;
+  width: 20px;
+  max-width: 20px;
+  transform: translateX(-3px);
+  color: #b43daf;
 }
 
 i.collapsed:before {
-    display: inline-block;
-    content: "▶";
-    font-style: normal;
-    width: 20px;
-    max-width: 20px;
-    color: #b43daf;
+  display: inline-block;
+  content: "▶";
+  font-style: normal;
+  width: 20px;
+  max-width: 20px;
+  color: #b43daf;
 }
 
 .example-multiple-targets::after {
-    content: attr(data-count);
-    display: block;
+  content: attr(data-count);
+  display: block;
 }
 
 .directory-select {
