@@ -9,4 +9,4 @@ RUN npm install
 RUN npm run build
 
 FROM linuxserver/letsencrypt
-COPY --from=0 /opt/build /var/www/etr-frontend
+COPY --from=0 /opt/build /var/www/etr-frontend/build
