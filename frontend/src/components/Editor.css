@@ -11,7 +11,21 @@
   height: 100%;
 }
 
-.CodeMirror-overlayscroll-horizontal div, .CodeMirror-overlayscroll-vertical div {
+.CodeMirror-overlayscroll-horizontal div,
+.CodeMirror-overlayscroll-vertical div {
   background: #ddd;
 }
+
+.file-banner-button,
+.folder-banner-button {
+  cursor: pointer;
+  transition: filter 0.3s ease-in-out;
+}
+
+
+.file-banner-button:hover,
+.folder-banner-button:hover{
+  filter: brightness(80%);
+}
+
 
