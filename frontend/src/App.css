@@ -144,15 +144,15 @@ sup {
 .app-container {
   display: flex;
   justify-content: space-between;
-  height: calc(100vh - 100px);
+  height: calc(100vh - 90px);
   /* vh means viewport height */
-  padding: 10px 15px;
+  padding: 0 12px 8px 12px;
   box-sizing: border-box;
   background-color: #f1f1f1;
 }
 
 .manim-output {
-  margin-right: 20px;
+  margin-right: 18px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
