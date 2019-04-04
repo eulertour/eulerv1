@@ -4,6 +4,7 @@ import { withCookies, CookiesProvider } from 'react-cookie';
 import App from './App.js';
 import LoginPage from './LoginPage.js';
 import Home from './Home.js';
+import Projects from './Projects.js';
 
 class Main extends React.Component {
     constructor(props, context) {
@@ -85,6 +86,7 @@ class Main extends React.Component {
                             onSessionRestore={this.handleSessionRestore}
                         />
                     }/>
+                    <Route path="/projects" render={() => <Projects />}/>
                 </Switch>
             </BrowserRouter>
             </CookiesProvider>
