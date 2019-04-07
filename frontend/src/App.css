@@ -32,15 +32,21 @@ sup {
 
 .logo-container {
   display: flex;
-  color: #444;
+  align-items: center;
+  padding-left: 8px;
+}
+
+.projects-logo-container {
+  position: absolute;
+  left: 0;
 }
 
 .banner-logo {
   max-height: 60px;
-  padding-left: 8px;
 }
 
 .banner-text {
+  color: #444;
   margin: auto 0 auto 4px;
   font-size: 28px;
 }
