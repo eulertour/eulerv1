@@ -17,6 +17,10 @@ import PropTypes from 'prop-types';
 import MenuIcon from '@material-ui/icons/Menu';
 import SearchIcon from '@material-ui/icons/Search';
 import { fade } from '@material-ui/core/styles/colorManipulator';
+import Card from '@material-ui/core/Card';
+import CardContent from '@material-ui/core/CardContent';
+import CardActionArea from '@material-ui/core/CardActionArea';
+
 
 const drawerWidth = 260;
 const styles = theme => ({
@@ -35,6 +39,7 @@ const styles = theme => ({
     zIndex: theme.zIndex.drawer + 1,
     minHeight: 70,
     backgroundColor: theme.palette.common.white,
+    boxShadow: "2px 6px 10px 0 rgba(115, 143, 147, .4)",
   },
   appBarShift: {
     width: `calc(100% - ${drawerWidth}px)`,
@@ -49,10 +54,6 @@ const styles = theme => ({
   },
   hide: {
     display: 'none',
-  },
-  drawer: {
-    width: drawerWidth,
-    flexShrink: 0,
   },
   drawerPaper: {
     width: drawerWidth,
@@ -124,6 +125,14 @@ const styles = theme => ({
   },
   colorBlack: {
     color: theme.palette.common.black,
+  },
+  card: {
+    height: '100%',
+    width: '100%',
+    padding: 0,
+  },
+  list: {
+    backgroundColor: theme.palette.background.paper,
   }
 });
 
@@ -131,6 +140,12 @@ class Projects extends React.Component {
     state = {
         drawerOpen: false,
         sharedProjects: true,
+        projects: ['project1', 'project2'],
+        searchInput: '',
+    }
+
+    chooseProject = (name) => {
+        console.log('chose ' + name);
     }
 
     handleDrawerToggle = () => {
@@ -139,7 +154,7 @@ class Projects extends React.Component {
 
     render() {
         const { classes } = this.props;
-        const { drawerOpen, sharedProjects } = this.state;
+        const { drawerOpen, sharedProjects, projects, searchInput } = this.state;
         return (
             <div className={classes.root}>
                 <AppBar
@@ -176,10 +191,12 @@ class Projects extends React.Component {
                         </div>
                        <div className={classes.search}>
                          <div className={classes.searchIcon}>
-                           <SearchIcon />
+                           <SearchIcon/>
                          </div>
                          <TextField
                            variant="outlined"
+                           value={searchInput}
+                           onChange={(e) => {this.setState({searchInput: e.target.value})}}
                            InputProps={{
                              placeholder:"Search…",
                              classes:{
@@ -198,9 +215,19 @@ class Projects extends React.Component {
                 >
                     <div className={classes.drawerHeader} />
                     {sharedProjects ? "shared projects" : "your projects"}
+                    <List classes={{root: classes.list}}>
+                      {projects.map(projectName => (
+                        <ListItem
+                          button
+                          divider
+                          key={projectName}
+                          onClick={() => {this.chooseProject(projectName)}}>
+                          {projectName}
+                        </ListItem>)
+                      )}
+                    </List>
                 </div>
                 <Drawer
-                    className={classes.drawer}
                     variant="persistent"
                     anchor="left"
                     open={drawerOpen}
