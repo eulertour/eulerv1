@@ -1,21 +1,21 @@
-import React, { Component } from 'react';
-import {Controlled as CodeMirror} from 'react-codemirror2';
-import renderIcon from '../assets/icon-render@3x.svg';
-import saveIcon from '../assets/icon-save@3x.svg';
+import React, { Component } from "react";
+import { Controlled as CodeMirror } from "react-codemirror2";
+import saveIcon from "../assets/icon-save@3x.svg";
 // import settingsIcon from '../assets/icon-settings@3x.svg';
-import TreeExample from '../components/tree.jsx';
-import collapseTreeIcon from '../assets/icon-left@3x.svg';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { library } from '@fortawesome/fontawesome-svg-core'
-import { faEraser } from '@fortawesome/free-solid-svg-icons'
-require('codemirror/lib/codemirror.css');
-require('codemirror/theme/material.css');
-require('codemirror/theme/neat.css');
-require('codemirror/mode/xml/xml.js');
-require('codemirror/mode/python/python.js');
-require('codemirror/addon/scroll/simplescrollbars.js');
-require('codemirror/addon/scroll/simplescrollbars.css');
-require('./Editor.css');
+import TreeExample from "../components/tree.jsx";
+import collapseTreeIcon from "../assets/icon-left@3x.svg";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { library } from "@fortawesome/fontawesome-svg-core";
+import { faEraser } from "@fortawesome/free-solid-svg-icons";
+import { RenderButton } from "./RenderButton";
+require("codemirror/lib/codemirror.css");
+require("codemirror/theme/material.css");
+require("codemirror/theme/neat.css");
+require("codemirror/mode/xml/xml.js");
+require("codemirror/mode/python/python.js");
+require("codemirror/addon/scroll/simplescrollbars.js");
+require("codemirror/addon/scroll/simplescrollbars.css");
+require("./Editor.css");
 
 library.add(faEraser);
 
@@ -23,37 +23,33 @@ class Editor extends Component {
     state = {
         menuOpen: false,
         treeCollapsed: false,
-        gutterWidth: -1,
-    }
-
-    constructor(props, context) {
-        super(props, context);
-        this.getFileBanner=this.getFileBanner.bind(this);
-        this.handleTreeToggle=this.handleTreeToggle.bind(this);
-    }
+        gutterWidth: -1
+    };
 
     componentDidUpdate() {
         // a hack to make sure the expand button and gutter have equal width
-        let gutter = document.getElementsByClassName("CodeMirror-gutter CodeMirror-linenumbers")[0];
+        let gutter = document.getElementsByClassName(
+            "CodeMirror-gutter CodeMirror-linenumbers"
+        )[0];
         let gutterWidth = window.getComputedStyle(gutter).width;
         gutterWidth = gutterWidth.slice(0, gutterWidth.length - 2);
         gutterWidth = Math.round(parseFloat(gutterWidth));
         if (gutterWidth !== this.state.gutterWidth) {
-            this.setState({gutterWidth: gutterWidth});
+            this.setState({ gutterWidth: gutterWidth });
         }
     }
 
-    handleTreeToggle() {
-        this.setState({treeCollapsed: !this.state.treeCollapsed});
-    }
+    handleTreeToggle = () => {
+        this.setState({ treeCollapsed: !this.state.treeCollapsed });
+    };
 
-    getFileBanner() {
+    getFileBanner = () => {
         let collapseArrow = null;
         let filename;
         if (this.state.treeCollapsed) {
             collapseArrow = (
                 <div
-                    style={{width: this.state.gutterWidth + 'px'}}
+                    style={{ width: this.state.gutterWidth + "px" }}
                     className="expand-button"
                     onClick={this.handleTreeToggle}
                 >
@@ -63,7 +59,7 @@ class Editor extends Component {
                         alt="collapse tree"
                     />
                 </div>
-            )
+            );
         }
         filename = (
             <div className="arrow-and-filename">
@@ -100,75 +96,18 @@ class Editor extends Component {
                 </div>
             </div>
         );
-    }
-
-    getRenderButton() {
-        if (this.props.renderStatus === "") {
-            return (
-                <div
-                    className="render-button"
-                    onClick={this.props.onRender}>
-                    <img
-                        className="render-icon"
-                        src={renderIcon}
-                        alt="render"
-                    />
-                    Render Scene
-                </div>
-            );
-        } else if (this.props.renderStatus === "request-sent") {
-            return (
-                <div
-                    className="render-button"
-                    onClick={this.props.onRenderCanceled}>
-                    <img
-                        className="render-icon"
-                        src={renderIcon}
-                        alt="render"
-                    />
-                    Request Sent...
-                </div>
-            );
-        } else if (this.props.renderStatus === "queued") {
-            return (
-                <div
-                    className="render-button"
-                    onClick={this.props.onRenderCanceled}>
-                    <img
-                        className="render-icon"
-                        src={renderIcon}
-                        alt="render"
-                    />
-                    Queued...
-                </div>
-            );
-        } else if (this.props.renderStatus === "started") {
-            return (
-                <div
-                    className="render-button"
-                    onClick={this.props.onRenderCanceled}>
-                    <img
-                        className="render-icon"
-                        src={renderIcon}
-                        alt="render"
-                    />
-                    Rendering...
-                </div>
-            );
-        }
-    }
+    };
 
     render() {
         return (
             <div className="manim-input">
                 <div className="editor-container">
-                    {this.state.treeCollapsed ? null :
+                    {this.state.treeCollapsed ? null : (
                         <TreeExample
                             files={this.props.files}
                             cursor={this.props.cursor}
                             animating={this.props.animating}
                             expandedKeys={this.props.expandedKeys}
-
                             onAnimationComplete={this.props.onAnimationComplete}
                             onFileDelete={this.props.onFileDelete}
                             onFileMove={this.props.onFileMove}
@@ -177,24 +116,23 @@ class Editor extends Component {
                             onNewFileName={this.props.onNewFileName}
                             onToggle={this.props.onToggle}
                             onTreeToggle={this.handleTreeToggle}
-
                             onTreeChange={this.props.onTreeChange}
                             onTreeExpand={this.props.onTreeExpand}
                             onFileFetch={this.props.onFileFetch}
                             onDirFetch={this.props.onDirFetch}
                         />
-                    }
+                    )}
                     <div className="editor-part">
                         {this.getFileBanner()}
                         <CodeMirror
                             value={this.props.code}
                             options={{
-                                mode: 'python',
-                                theme: 'default',
+                                mode: "python",
+                                theme: "default",
                                 lineNumbers: true,
                                 viewportMargin: 30,
-                                scrollbarStyle: 'overlay',
-                                readOnly: this.props.readOnly,
+                                scrollbarStyle: "overlay",
+                                readOnly: this.props.readOnly
                             }}
                             onBeforeChange={(editor, data, value) => {
                                 this.props.onCodeChange(value);
@@ -226,7 +164,11 @@ class Editor extends Component {
                             value={this.props.sceneInput}
                             onChange={this.props.onInputSceneChange}
                         />
-                        {this.getRenderButton()}
+                        <RenderButton
+                            onRender={this.props.onRender}
+                            renderStatus={this.props.renderStatus}
+                            onRenderCanceled={this.props.onRenderCanceled}
+                        />
                     </div>
                 </div>
             </div>

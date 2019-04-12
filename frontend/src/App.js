@@ -1,20 +1,29 @@
-import 'antd/dist/antd.css';
-import './App.css';
-import React from 'react';
-import { withRouter, NavLink } from 'react-router-dom';
-import { instanceOf } from 'prop-types';
-import { withCookies, Cookies } from 'react-cookie';
-import axios from 'axios';
-import NotVideo from './components/notvideo.jsx';
-import * as consts from './constants.js';
-import Editor from './components/editor.jsx';
-import logo from './assets/etourlogo.jpg';
-import anonymousUser from './assets/icon-name-active@3x.svg';
-import fileImage from './assets/icon-file@3x.svg';
-import _ from 'lodash';
-import Login from './components/login.jsx';
-import closeIcon from './assets/e-remove.svg';
-import * as utils from './utils.js';
+import "antd/dist/antd.css";
+import "./App.css";
+import React from "react";
+import { withRouter, NavLink } from "react-router-dom";
+import { instanceOf } from "prop-types";
+import { withCookies, Cookies } from "react-cookie";
+import NotVideo from "./components/notvideo.jsx";
+import * as consts from "./constants.js";
+import Editor from "./components/editor.jsx";
+import logo from "./assets/etourlogo.jpg";
+import {
+    resetProject,
+    deleteFile,
+    newFileName,
+    saveProject,
+    checkRenderStatus,
+    getFileContents,
+    getDirectoryContents,
+    postRender,
+    fetchRestoreSession
+} from "./api";
+import _ from "lodash";
+import * as utils from "./utils.js";
+import { LoginModal } from "./components/loginModal";
+import { ResetModal } from "./components/resetModal";
+import { LoginInfo } from "./components/LoginInfo";
 
 class App extends React.Component {
     static propTypes = {
@@ -48,224 +57,126 @@ class App extends React.Component {
             renderTimer: -1,
             showFileMoveModal: false,
             showLoginModal: false,
-            showProjectResetModal: false,
-        }
-        this.fetchDirectoryContents = this.fetchDirectoryContents.bind(this);
-        this.fetchFileContents = this.fetchFileContents.bind(this);
-        this.handleAnimationComplete=this.handleAnimationComplete.bind(this);
-        this.handleCodeChange = this.handleCodeChange.bind(this);
-        this.handleFileDelete=this.handleFileDelete.bind(this);
-        this.handleFileRename=this.handleFileRename.bind(this);
-        this.handleFilenameChange = this.handleFilenameChange.bind(this);
-        this.handleInputFilenameChange = this.handleInputFilenameChange.bind(this);
-        this.handleInputSceneChange = this.handleInputSceneChange.bind(this);
-        this.handleModalClick = this.handleModalClick.bind(this);
-        this.handleNewFile = this.handleNewFile.bind(this);
-        this.handleNewFileName = this.handleNewFileName.bind(this);
-        this.handleRender = this.handleRender.bind(this);
-        this.handleRenderCanceled = this.handleRenderCanceled.bind(this);
-        this.handleRenderFinished = this.handleRenderFinished.bind(this);
-        this.handleSave = this.handleSave.bind(this);
-        this.handleSceneChange = this.handleSceneChange.bind(this);
-        this.handleSetAutosaveTimeout=this.handleSetAutosaveTimeout.bind(this);
-        this.handleProjectReset=this.handleProjectReset.bind(this);
-        this.handleToggle = this.handleToggle.bind(this);
-        this.logOut = this.logOut.bind(this);
-        this.restoreSession = this.restoreSession.bind(this);
-        this.resetProject = this.resetProject.bind(this);
-
-        this.treeChange = this.treeChange.bind(this);
-        this.handleTreeExpand = this.handleTreeExpand.bind(this);
+            showProjectResetModal: false
+        };
     }
 
-    handleTreeExpand(expandedKeys, cb) {
-        this.setState({treeExpandedKeys: expandedKeys}, cb);
-    }
+    handleTreeExpand = (expandedKeys, cb) => {
+        this.setState({ treeExpandedKeys: expandedKeys }, cb);
+    };
 
-    handleProjectReset() {
-        this.setState({showProjectResetModal: true});
-    }
+    handleProjectReset = () => {
+        this.setState({ showProjectResetModal: true });
+    };
 
-    resetProject() {
-        axios.delete(consts.PROJECT_DELETE_URL, {
-            params: {project: this.state.project},
-            headers: this.getHeadersDict(this.props.access),
-        })
-        .then(response => {
-            let files = response.data.files.map(obj => {
-                if (obj.directory) {
-                    delete obj.directory;
-                    let childrenNotLoaded = consts.CHILDREN_NOT_LOADED;
-                    childrenNotLoaded[0]['id'] = childrenNotLoaded[0]['name'];
-                    obj['children'] = childrenNotLoaded;
-                    obj['loading'] = true;
-                } else {
-                    delete obj.directory;
-                }
-                if (obj['library']) {
-                    obj['readOnly'] = true;
-                }
-        obj['id'] = obj['name'];
-                return obj;
-            });
-            this.setState({
-                editorCode: response.data.code,
-                editorFilename: response.data.filename,
-                editorFilenameInput: response.data.filename,
-                editorFiles: files,
-                editorSceneInput: response.data.scene,
-                project: response.data.project,
-                videoScene: response.data.scene,
-            });
-        })
-        .catch(error => {
-            if (error.response !== undefined &&
-                error.response.status === 401) {
-                this.setState({showLoginModal: true});
-            }
-        });
-    }
+    handleAnimationComplete = () => {
+        this.setState({ editorAnimating: false });
+    };
 
-    handleAnimationComplete() {
-        this.setState({editorAnimating: false});
-    }
-
-    handleSetAutosaveTimeout() {
+    handleSetAutosaveTimeout = () => {
         clearTimeout(this.state.autosaveTimer);
-        let autosaveTimer = setTimeout(
-            () => { this.handleSave(); },
-            consts.AUTOSAVE_TIMEOUT_MS
-        );
+        let autosaveTimer = setTimeout(() => {
+            this.handleSave();
+        }, consts.AUTOSAVE_TIMEOUT_MS);
         this.setState({
             autosaveTimer: autosaveTimer,
-            editorSaveMessage: "",
+            editorSaveMessage: ""
         });
-    }
+    };
 
-    handleFileRename(e, data, target) {
+    loginSuccess = response => {
+        this.setState({ showLoginModal: false });
+        this.props.onAuth(response);
+        this.restoreSession(this.props.access);
+    };
+
+    handleFileRename = (e, data, target) => {
         e.stopPropagation();
         let filesCopy = _.cloneDeep(this.state.editorFiles);
         let filePath = data.node.id;
-        let pathList = filePath.split('/');
-        let renameNode = utils.getNodeFromPathList(
-            filesCopy,
-            pathList,
-        );
+        let pathList = filePath.split("/");
+        let renameNode = utils.getNodeFromPathList(filesCopy, pathList);
         renameNode.untitled = true;
         this.setState({
-            editorFiles: filesCopy,
+            editorFiles: filesCopy
         });
-    }
+    };
 
-    handleFileDelete(e, data, target) {
+    handleFileDelete = async (e, data, target) => {
         e.stopPropagation();
-        let filePath = data.node.id;
-        let pathList = filePath.split('/');
-        let delNode = utils.getNodeFromPathList(
-            this.state.editorFiles,
-            pathList,
-        );
-        axios.delete(consts.MODULE_DELETE_URL, {
-            params: {
-                project: this.state.project,
-                name: filePath,
-                directory: 'children' in delNode ? 1 : 0,
-            },
-            headers: this.getHeadersDict(this.props.access),
-        })
-        .then(response => {
-            let filesCopy = _.cloneDeep(this.state.editorFiles);
-            let delNode = utils.getNodeFromPathList(filesCopy, pathList);
-            if ('directory' in delNode) {
-                _.remove(
-                    delNode.directory.children,
-                    (o) => {return _.isEqual(o, delNode)}
-                );
-                if (delNode.directory.children.length === 0) {
-                    delNode.directory.children = consts.NO_CHILDREN;
-                    delNode.directory.empty = true;
-                }
-            } else {
-                _.remove(filesCopy, (o) => {return _.isEqual(o, delNode)});
-            }
-            clearTimeout(this.state.autosaveTimer);
-            if (!_.isEmpty(this.state.editorCursor) && !delNode.active) {
-                utils.getNodeFromPathList(
-                    filesCopy,
-                    utils.getNodePathList(this.state.editorCursor),
-                ).active = false;
-            }
-            let expandedKeysCopy = []
-            for (let i = 0; i < this.state.treeExpandedKeys.length; i++) {
-                if (this.state.treeExpandedKeys[i].startsWith(delNode.id + '/') ||
-                    this.state.treeExpandedKeys[i] === delNode.id) {
-                    continue;
-                }
-                expandedKeysCopy.push(this.state.treeExpandedKeys[i]);
-            }
-            this.setState({
-                editorFiles: filesCopy,
-                editorFilename: "",
-                editorCode: "",
-                editorCursor: {},
-                treeExpandedKeys: expandedKeysCopy,
-            });
-        })
-        .catch(error => {
-            if (error.response !== undefined) {
-                console.log('error deleting file');
-            }
-        });
-    }
 
-    getHeadersDict(accessToken) {
-        return accessToken.length !== 0 ?
-            {'Authorization': 'Bearer ' + this.props.access} :
-            {};
-    }
+        const response = await deleteFile(
+            this.state.project,
+            this.props.access,
+            data,
+            this.state.editorFiles,
+            this.state.autosaveTimer,
+            this.state.editorCursor,
+            this.state.treeExpandedKeys
+        );
+
+        this.setState({
+            editorFiles: response.filesCopy,
+            editorFilename: "",
+            editorCode: "",
+            editorCursor: {},
+            treeExpandedKeys: response.expandedKeysCopy
+        });
+    };
+
+    getHeadersDict = accessToken => {
+        return accessToken.length !== 0
+            ? { Authorization: "Bearer " + this.props.access }
+            : {};
+    };
 
     changeSubtreeIds(node, oldIdPrefix, newIdPrefix) {
-        if ('id' in node && node.id.startsWith(oldIdPrefix)) {
+        if ("id" in node && node.id.startsWith(oldIdPrefix)) {
             node.id = newIdPrefix + node.id.slice(oldIdPrefix.length);
         }
-        if ('children' in node) {
+        if ("children" in node) {
             for (let i = 0; i < node.children.length; i++) {
                 this.changeSubtreeIds(
                     node.children[i],
                     oldIdPrefix,
-                    newIdPrefix,
+                    newIdPrefix
                 );
             }
         }
     }
 
-    handleNewFileName(node, name) {
+    handleNewFileName = async (node, name) => {
         let filesCopy = _.cloneDeep(this.state.editorFiles);
         let nodeCopy = utils.getNodeFromPathList(
             filesCopy,
-            utils.getNodePathList(node),
+            utils.getNodePathList(node)
         );
-        let siblingList = 'directory' in node ?
-            nodeCopy.directory.children :
-            filesCopy;
+        let siblingList =
+            "directory" in node ? nodeCopy.directory.children : filesCopy;
 
         let valid = true;
         let errorMsg = "";
-        if (_.find(siblingList, (o) => {return o.name === name})) {
+        if (
+            _.find(siblingList, o => {
+                return o.name === name;
+            })
+        ) {
             valid = false;
             errorMsg = "filename is taken";
-        } else if (name.indexOf('/') !== -1) {
+        } else if (name.indexOf("/") !== -1) {
             valid = false;
             errorMsg = "invalid filename";
         }
         if (!valid) {
             alert(errorMsg);
             if (node.name === undefined) {
-                _.remove(siblingList, (o) => {return _.isEqual(o, node)});
+                _.remove(siblingList, o => {
+                    return _.isEqual(o, node);
+                });
             } else {
                 nodeCopy.untitled = false;
             }
-            this.setState({editorFiles: filesCopy});
+            this.setState({ editorFiles: filesCopy });
             return;
         }
         let data;
@@ -275,9 +186,9 @@ class App extends React.Component {
             data = {
                 // TODO: this should maybe be a path list
                 // (if you want to REALLY enforce separation)
-                name: pathList.join('/'),
+                name: pathList.join("/"),
                 project: this.state.project,
-                code: "",
+                code: ""
             };
         } else {
             let newNamePathList = _.cloneDeep(pathList);
@@ -285,130 +196,54 @@ class App extends React.Component {
             data = {
                 // TODO: this should maybe be a path list
                 // (if you want to REALLY enforce separation)
-                name: pathList.join('/'),
+                name: pathList.join("/"),
                 project: this.state.project,
                 // TODO: join the path from pathList
-                newName: newNamePathList.join('/'),
+                newName: newNamePathList.join("/")
             };
         }
         if ("children" in node) {
-            data['directory'] = true;
+            data["directory"] = true;
         } else {
-            data['directory'] = false;
+            data["directory"] = false;
         }
-        axios.post(
-            consts.SAVE_URL,
+        const response = await newFileName(
+            node,
+            name,
             data,
-            {headers: this.getHeadersDict(this.props.access)},
-        )
-        .catch(error => {
-            if (node.name === undefined) {
-                if (siblingList.length === 1) {
-                    nodeCopy.directory.empty = true;
-                    nodeCopy.directory.children = consts.NO_CHILDREN;
-                } else {
-                    _.remove(siblingList, (o) => {return _.isEqual(o, node)});
-                }
-            } else {
-                nodeCopy.untitled = false;
-            }
-            this.setState({editorFiles: filesCopy});
-            if (error.response !== undefined &&
-                error.response.status === 401) {
-                this.setState({showLoginModal: true});
-            }
-            if (error.response !== undefined &&
-                error.response.status === 400) {
-                console.log(error.response.data.error);
-                // they probably gave an illegal filename
-                this.setState({});
-            }
-        })
-        .then(response => {
-            nodeCopy['untitled'] = false;
-            nodeCopy['name'] = name;
-            nodeCopy['project'] = this.state.project;
-            let oldId = nodeCopy.id;
-            let newId;
-            if ('directory' in nodeCopy) {
-                newId = nodeCopy['directory'].id + '/' + name;
-            } else {
-                newId = name;
-            }
-            this.changeSubtreeIds(nodeCopy, oldId, newId);
-            let expandedKeysCopy = _.cloneDeep(this.state.treeExpandedKeys);
-            for (let i = 0; i < expandedKeysCopy.length; i++) {
-                if (expandedKeysCopy[i].startsWith(oldId + '/') ||
-                    expandedKeysCopy[i] === oldId) {
-                    expandedKeysCopy[i] = nodeCopy.id + expandedKeysCopy[i].slice(oldId.length);
-                }
-            }
-
-            // TODO: actually check the number of lib dirs
-            let libraryDirs;
-            if (!('directory' in node)) {
-                libraryDirs = filesCopy.slice(0, 1);
-                siblingList = filesCopy.slice(1);
-            } else {
-                libraryDirs = [];
-                siblingList = nodeCopy.directory.children;
-            }
-            let fileIndex = siblingList.findIndex(
-                (o) => {return !("children" in o)}
-            );
-            if (fileIndex === -1) {
-                fileIndex = filesCopy.length;
-            }
-            let dirArray = siblingList.slice(0, fileIndex);
-            let fileArray = siblingList.slice(fileIndex);
-            let nodeSort = (o1, o2) => {
-                if (o1.name < o2.name)
-                    return -1;
-                else if (o1.name > o2.name)
-                    return 1;
-                else
-                    return 0;
-            };
-            if ('children' in node) {
-                dirArray = dirArray.sort(nodeSort);
-            } else {
-                fileArray = fileArray.sort(nodeSort);
-            }
-            fileArray = dirArray.concat(fileArray);
-            if (!('directory' in node)) {
-                // TODO: actually check the number of lib dirs
-                filesCopy = libraryDirs.concat(fileArray);
-            } else {
-                nodeCopy.directory.children = libraryDirs.concat(fileArray);
-            }
-            let newFilename = this.state.editorFilename;
-            let newCursor = this.state.editorCursor;
-            if (!_.isEmpty(this.state.editorCursor)) {
-                let cursorMaybe = utils.getNodeFromPathList(
-                    filesCopy,
-                    utils.getNodePathList(this.state.editorCursor));
-                if (this.state.editorCursor.name !== cursorMaybe.name) {
-                    newFilename = utils.getNodePathList(nodeCopy).join('/');
-                    newCursor = nodeCopy;
-                }
-            }
+            siblingList,
+            nodeCopy,
+            filesCopy,
+            this.props.access
+        );
+        console.log(response.response);
+        if (
+            response.response !== undefined &&
+            response.response.status === 401
+        ) {
+            this.setState({ editorFiles: filesCopy, showLoginModal: true });
+        } else if (
+            response.response !== undefined &&
+            response.response.status === 400
+        ) {
+            console.log(response.response.data.error);
+            // they probably gave an illegal filename
+            this.setState({ editorFiles: filesCopy });
+        } else {
             this.setState({
-                editorFiles: filesCopy,
-                editorFilename: newFilename,
-                editorCursor: newCursor,
-                treeExpandedKeys: expandedKeysCopy,
+                editorFiles: response.filesCopy,
+                editorFilename: response.newFilename,
+                editorCursor: response.newCursor,
+                treeExpandedKeys: response.expandedKeysCopy
             });
-        })
-        .catch(error => {
-            console.log(error);
-        });
-    }
+        }
+    };
 
-    handleToggle(node, toggled) {
+    handleToggle = (node, toggled) => {
         if (
             node.untitled ||
             node.active ||
-            (!('children' in node) && node.empty)
+            (!("children" in node) && node.empty)
         ) {
             return;
         }
@@ -416,72 +251,83 @@ class App extends React.Component {
         clearInterval(this.state.autosaveTimer);
         let filesCopy = _.cloneDeep(this.state.editorFiles);
         let nodeCopy = utils.getNodeFromPathList(
-            filesCopy, utils.getNodePathList(node));
+            filesCopy,
+            utils.getNodePathList(node)
+        );
         let oldCursorCopy = utils.getNodeFromPathList(
-            filesCopy, utils.getNodePathList(this.state.editorCursor));
+            filesCopy,
+            utils.getNodePathList(this.state.editorCursor)
+        );
         let newCursorCopy = this.state.editorCursor;
 
         if (!("children" in node)) {
             nodeCopy.active = true;
-            if (!_.isEmpty(this.state.editorCursor) && this.state.editorCursor !== undefined) {
+            if (
+                !_.isEmpty(this.state.editorCursor) &&
+                this.state.editorCursor !== undefined
+            ) {
                 oldCursorCopy.active = false;
             }
             newCursorCopy = nodeCopy;
         } else {
             nodeCopy.toggled = toggled;
         }
-        if ('children' in node && toggled && node.loading) {
+        if ("children" in node && toggled && node.loading) {
             this.fetchDirectoryContents(nodeCopy);
         } else {
             this.fetchFileContents(nodeCopy);
         }
         this.setState({
             editorFiles: filesCopy,
-            editorCursor: newCursorCopy,
+            editorCursor: newCursorCopy
         });
-    }
+    };
 
-    handleNewFile(e, data, target) {
+    handleNewFile = (e, data, target) => {
         // if data is undefined, a top-level file is being created
-        let isTopLevel = (data === undefined);
+        let isTopLevel = data === undefined;
         let action;
         if (isTopLevel) {
             action = e;
         } else {
             action = data.action;
         }
-        if (!_.find(['new-file', 'new-directory'],
-            (o) => {return o === action})) {
-            console.log('unknown action');
+        if (
+            !_.find(["new-file", "new-directory"], o => {
+                return o === action;
+            })
+        ) {
+            console.log("unknown action");
             return;
         }
 
         let filesCopy = _.cloneDeep(this.state.editorFiles);
         let animating = this.state.editorAnimating;
         let nodeCopy;
-        if (action === 'new-file') {
+        if (action === "new-file") {
             nodeCopy = {
                 name: undefined,
-                untitled: true,
+                untitled: true
             };
         } else {
             nodeCopy = {
                 name: undefined,
                 untitled: true,
                 empty: true,
-                children: consts.NO_CHILDREN,
+                children: consts.NO_CHILDREN
             };
         }
         let siblingList;
         let fileIndex;
         if (isTopLevel) {
             siblingList = filesCopy;
-            nodeCopy['id'] = consts.UNNAMED_FILE_ID;
-            if ('children' in nodeCopy) {
-                nodeCopy.children[0].id = nodeCopy.id + '/' + nodeCopy.children[0].name;
+            nodeCopy["id"] = consts.UNNAMED_FILE_ID;
+            if ("children" in nodeCopy) {
+                nodeCopy.children[0].id =
+                    nodeCopy.id + "/" + nodeCopy.children[0].name;
             }
         } else {
-            let pathList = data.node.id.split('/');
+            let pathList = data.node.id.split("/");
             let newParent = utils.getNodeFromPathList(filesCopy, pathList);
             siblingList = newParent.children;
             if (!newParent.toggled) {
@@ -494,18 +340,18 @@ class App extends React.Component {
                 newParent.empty = false;
                 siblingList.length = 0;
             }
-            nodeCopy['id'] = newParent.id + '/' + consts.UNNAMED_FILE_ID;
-            if ('children' in nodeCopy) {
-                nodeCopy.children[0].id = nodeCopy.id + '/' + nodeCopy.children[0].name;
+            nodeCopy["id"] = newParent.id + "/" + consts.UNNAMED_FILE_ID;
+            if ("children" in nodeCopy) {
+                nodeCopy.children[0].id =
+                    nodeCopy.id + "/" + nodeCopy.children[0].name;
             }
         }
-        if (action === 'new-file') {
+        if (action === "new-file") {
             fileIndex = siblingList.length;
         } else {
-            fileIndex = _.findIndex(
-                siblingList,
-                (o) => {return !("children" in o)}
-            );
+            fileIndex = _.findIndex(siblingList, o => {
+                return !("children" in o);
+            });
             if (fileIndex === -1) {
                 fileIndex = siblingList.length;
             }
@@ -513,464 +359,265 @@ class App extends React.Component {
         siblingList.splice(fileIndex, 0, nodeCopy);
         this.setState({
             editorFiles: filesCopy,
-            editorAnimating: animating,
+            editorAnimating: animating
         });
-    }
+    };
 
-    restoreSession(accessToken) {
-        axios.post(
-            consts.SESSION_URL,
-            {
-                // TODO: this should be a path list
-                name: this.state.editorFilename,
-                project: this.state.project,
-                directory: true,
-            },
-            {headers: this.getHeadersDict(accessToken)},
-        )
-        .then(response => {
-            let files = response.data.files.map(obj => {
-                if (obj.directory) {
-                    delete obj.directory;
-                    let childrenNotLoaded = consts.CHILDREN_NOT_LOADED;
-                    childrenNotLoaded[0]['id'] = childrenNotLoaded[0]['name'];
-                    obj['children'] = childrenNotLoaded;
-                    obj['loading'] = true;
-                } else {
-                    delete obj.directory;
-                }
-                if (obj['library']) {
-                    obj['readOnly'] = true;
-                }
-                obj['id'] = obj['name'];
-                return obj;
-            });
-            this.setState({
-                editorCode: response.data.code || this.state.editorCode,
-                editorFilename: response.data.filename || this.state.editorFilename,
-                editorFilenameInput: response.data.filename || this.state.editorFilenameInput,
-                editorFiles: files || this.state.editorFiles,
-                editorSceneInput: response.data.scene || this.state.videoScene,
-                project: response.data.project || this.state.project,
-                videoScene: response.data.scene || this.state.videoScene,
-            });
-            if ('username' in response.data) {
-                this.props.onSessionRestore(response.data['username'])
-            }
-        })
-        .catch(error => {
-            if ('response' in error && error.response !== undefined
-                && 'data' in error.response) {
-                let data = error.response.data;
-                if (error.response.status === 401 &&
-                    data.code === 'token_not_valid' &&
-                    data.detail === 'Given token not valid for any token type') {
-                    alert('there was an error processing your token, ' +
-                          'please log in again');
-                    this.logOut();
-                }
-            }
-            console.log(error.response);
+    restoreSession = async accessToken => {
+        const response = await fetchRestoreSession(
+            accessToken,
+            this.state.editorFilename,
+            this.state.project
+        );
+        this.setState({
+            editorCode: response.data.code || this.state.editorCode,
+            editorFilename: response.data.filename || this.state.editorFilename,
+            editorFilenameInput:
+                response.data.filename || this.state.editorFilenameInput,
+            editorFiles: response.files || this.state.editorFiles,
+            editorSceneInput: response.data.scene || this.state.videoScene,
+            project: response.data.project || this.state.project,
+            videoScene: response.data.scene || this.state.videoScene
         });
-    }
+        if ("username" in response.data) {
+            this.props.onSessionRestore(response.data["username"]);
+        }
+    };
 
     componentDidMount() {
         this.restoreSession(this.props.access);
     }
 
-    handleModalClick(event) {
-        if ('closeonclick' in event.target.attributes) {
+    handleModalClick = event => {
+        if ("closeonclick" in event.target.attributes) {
             this.setState({
                 showLoginModal: false,
                 showFileMoveModal: false,
-                showProjectResetModal: false,
+                showProjectResetModal: false
             });
         }
-    }
+    };
 
-    fetchFileContents(node) {
+    handleResetProject = async () => {
+        this.setState({ showProjectResetModal: false });
+        const response = await resetProject(
+            this.state.project,
+            this.props.access
+        );
+        if (response.status === 401) {
+            this.setState({ showLoginModal: true });
+        } else {
+            this.setState({
+                editorCode: response.data.code,
+                editorFilename: response.data.filename,
+                editorFilenameInput: response.data.filename,
+                editorFiles: response.files,
+                editorSceneInput: response.data.scene,
+                project: response.data.project,
+                videoScene: response.data.scene
+            });
+        }
+    };
+
+    fetchFileContents = async node => {
         // double clicking a directory has no effect
-        if ('children' in node) {
+        if ("children" in node) {
             return;
         }
-        axios.post(
-            consts.GET_FILES_URL,
-            {
-                project: node.project,
-                pathList: node.id.split('/'),
-            },
-            {headers: this.getHeadersDict(this.props.access)},
-        )
-        .then(response => {
-            let displayingLibraryCode;
-            if (node.directory !== undefined && node.directory['library']) {
-                displayingLibraryCode = true;
-            }
-            this.setState({
-                editorFilename: utils.getNodePathList(node).join('/'),
-                editorCode: response.data['content'],
-                displayingLibraryCode: displayingLibraryCode,
-            })
-        })
-        .catch(error => {
-            console.log(error);
-            console.log(error.data);
+        const response = await getFileContents(node, this.props.access);
+        this.setState({
+            editorFilename: utils.getNodePathList(node).join("/"),
+            editorCode: response.data["content"],
+            displayingLibraryCode: response.displayingLibraryCode
         });
-    }
+    };
 
-    getNodePathList(node) {
+    getNodePathList = node => {
         let currentNode = node;
         let dirs = [currentNode.name];
-        while ('directory' in currentNode) {
+        while ("directory" in currentNode) {
             currentNode = currentNode.directory;
             dirs.push(currentNode.name);
         }
         return dirs.reverse();
-    }
+    };
 
-    getPathBaseName(path) {
-        let tokens = path.split('/');
+    getPathBaseName = path => {
+        let tokens = path.split("/");
         return tokens[tokens.length - 1];
-    }
+    };
 
-    treeChange(nodes) {
-        this.setState({editorFiles: nodes});
-    }
+    treeChange = nodes => {
+        this.setState({ editorFiles: nodes });
+    };
 
-    fetchDirectoryContents(node, cb) {
-        let pathList = node.id.split('/');
-        
-        axios.post(
-            consts.GET_FILES_URL,
-            {
-                project: node.project,
-                pathList: pathList,
-            },
-            {headers: this.getHeadersDict(this.props.access)},
-        )
-        .then(response => {
-            let filesCopy = _.cloneDeep(this.state.editorFiles);
-            let nodeCopy = utils.getNodeFromPathList(filesCopy, pathList);
-            if (response.data.length !== 0) {
-                let files = response.data.map(obj => {
-                    if (obj.directory) {
-                    let childrenNotLoaded = consts.CHILDREN_NOT_LOADED;
-                    childrenNotLoaded[0]['id'] = childrenNotLoaded[0]['name'];
-                        obj['children'] = childrenNotLoaded;
-                        obj['loading'] = true;
-                        obj['directory'] = node;
-                    } else {
-                        obj['directory'] = node;
-                    }
-                    if (node['library']) {
-                        obj['library'] = true;
-                        obj['readOnly'] = true;
-                    }
-                    obj['id'] = nodeCopy['id'] + '/' + obj['name'];
-                    return obj;
-                });
-                nodeCopy['children'] = files;
-            } else {
-                nodeCopy['empty'] = true;
-                let noChildren = consts.NO_CHILDREN;
-                noChildren[0]['id'] = nodeCopy['id'] + '/' + noChildren['name'];
-                nodeCopy['children'] = noChildren;
+    fetchDirectoryContents = async (node, cb) => {
+        const response = await getDirectoryContents(
+            node,
+            this.props.access,
+            this.state.editorFiles
+        );
+        this.setState({ editorFiles: response }, () => {
+            if (cb) {
+                cb();
             }
-            nodeCopy['loading'] = false;
-            this.setState({editorFiles: filesCopy}, () => {
-                if (cb) {
-                    cb();
-                }
-            });
-        })
-        .catch(error => {
-            console.log(error);
-            console.log(error.data);
-        })
-    }
+        });
+    };
 
-    handleCodeChange(newValue) {
-        this.setState({editorCode: newValue});
-    }
+    handleCodeChange = newValue => {
+        this.setState({ editorCode: newValue });
+    };
 
-    handleSceneChange(event) {
-        this.setState({videoScene: event.target.value});
-    }
+    handleSceneChange = event => {
+        this.setState({ videoScene: event.target.value });
+    };
 
-    handleFilenameChange(event) {
-        this.setState({editorFilename: event.target.value});
-    }
+    handleFilenameChange = event => {
+        this.setState({ editorFilename: event.target.value });
+    };
 
-    handleInputFilenameChange(event) {
-        this.setState({editorFilenameInput: event.target.value});
-    }
+    handleInputFilenameChange = event => {
+        this.setState({ editorFilenameInput: event.target.value });
+    };
 
-    handleInputSceneChange(event) {
-        this.setState({editorSceneInput: event.target.value});
-    }
+    handleInputSceneChange = event => {
+        this.setState({ editorSceneInput: event.target.value });
+    };
 
-    logOut() {
+    logOut = () => {
         // TODO: go to homepage
         this.props.onLogOut();
-        this.restoreSession('');
+        this.restoreSession("");
         this.setState({
             videoScene: consts.DEFAULT_SELECTED_SCENE,
             videoReturncode: -1,
             videoError: consts.DEFAULT_LOGS,
-            editorSaveMessage: "",
+            editorSaveMessage: ""
         });
-    }
+    };
 
-    handleRenderFinished(responseData) {
-        if (responseData.result['returncode'] === 0) {
+    handleRenderFinished = responseData => {
+        if (responseData.result["returncode"] === 0) {
             // a hack to get the video component to reload
             this.setState({
                 editorRenderStatus: "",
                 renderTimer: -1,
-                videoError: responseData.result['stderr'],
+                videoError: responseData.result["stderr"],
                 videoReturncode: 0,
-                videoScene: responseData['scene'],
-                videoFile: responseData['filename'],
-                videoReload: !this.state.videoReload,
+                videoScene: responseData["scene"],
+                videoFile: responseData["filename"],
+                videoReload: !this.state.videoReload
             });
         } else {
             let error;
-            if (responseData.result['stderr'].length !== 0) {
-                error = responseData.result['stderr'];
-            } else if (responseData.result['stdout'] !== 0) {
-                error = responseData.result['stdout'];
+            if (responseData.result["stderr"].length !== 0) {
+                error = responseData.result["stderr"];
+            } else if (responseData.result["stdout"] !== 0) {
+                error = responseData.result["stdout"];
             } else {
-                error = responseData.result['error'];
+                error = responseData.result["error"];
             }
             this.setState({
                 editorRenderStatus: "",
                 renderTimer: -1,
                 videoError: error,
-                videoReturncode: responseData.result['returncode'] || -1,
-                videoScene: responseData['scene'] || '',
+                videoReturncode: responseData.result["returncode"] || -1,
+                videoScene: responseData["scene"] || ""
             });
         }
-    }
+    };
 
-    handleRenderCanceled() {
+    handleRenderCanceled = () => {
         // TODO: cancel remote job
         clearInterval(this.state.renderTimer);
         this.setState({
             renderTimer: -1,
-            editorRenderStatus: "",
+            editorRenderStatus: ""
         });
-    }
+    };
 
-    checkRender(job_id) {
-        axios.get(consts.RENDER_URL + job_id)
-        .then(response => {
-            if ('status' in response.data) {
-                let renderStatus = response.data['status'];
-                if (renderStatus === 'unknown job') {
+    checkRender = async job_id => {
+        const response = await checkRenderStatus(job_id);
+        if (
+            response.response !== undefined &&
+            response.response.status === 401
+        ) {
+            console.log("not authenticated");
+        } else {
+            if ("status" in response.data) {
+                let renderStatus = response.data["status"];
+                if (renderStatus === "unknown job") {
                     renderStatus = this.state.editorRenderStatus;
                 }
-                if (renderStatus === 'finished') {
+                if (renderStatus === "finished") {
                     this.handleRenderFinished(response.data);
                 } else {
                     this.setState({
                         editorRenderStatus: renderStatus,
-                        renderTimer: setTimeout(
-                            () => {this.checkRender(job_id)},
-                            consts.CHECK_RENDER_INTERVAL_MS,
-                        )
+                        renderTimer: setTimeout(() => {
+                            this.checkRender(job_id);
+                        }, consts.CHECK_RENDER_INTERVAL_MS)
                     });
                 }
             }
-        })
-        .catch(error => {
-            if (error.response !== undefined &&
-                error.response.status === 401) {
-                console.log('not authenticated');
-            }
-        });
-    }
+        }
+    };
 
-    handleRender() {
-        axios({
-            method: 'post',
-            url: consts.RENDER_URL,
-            headers: this.getHeadersDict(this.props.access),
-            data: {
-                filename: this.state.editorFilenameInput,
-                scene: this.state.editorSceneInput,
-                project: this.state.project,
-            }
-        })
-        .then(response => {
-            if ('job_id' in response.data) {
-                this.setState({editorRenderStatus: "request-sent"})
-                this.checkRender(response.data['job_id']);
-            }
-        })
-        .catch(error => {
-            if (error.response !== undefined &&
-                error.response.status === 401) {
-                this.setState({showLoginModal: true});
-            }
-        });
-    }
+    handleRender = async () => {
+        const response = await postRender(
+            this.state.editorFilenameInput,
+            this.state.editorSceneInput,
+            this.state.project,
+            this.props.access
+        );
+        if (
+            response.response !== undefined &&
+            response.response.status === 401
+        ) {
+            this.setState({ showLoginModal: true });
+        } else {
+            this.setState({ editorRenderStatus: "request-sent" });
+            this.checkRender(response.data["job_id"]);
+        }
+    };
 
-    handleSave() {
+    handleSave = async () => {
         if (this.state.displayingLibraryCode) {
-            alert('sorry');
+            alert("sorry");
         }
         // TODO: implement save-on-signup
-        axios.post(
-            consts.SAVE_URL,
-            {
-                // TODO: this should be a path list
-                name: this.state.editorFilename,
-                project: this.state.project,
-                scene: this.state.editorSceneInput,
-                code: this.state.editorCode,
-                directory: false,
-            },
-            {headers: this.getHeadersDict(this.props.access)},
-        )
-        .then(response => {
+        const response = await saveProject(
+            this.state.editorFilename,
+            this.state.project,
+            this.state.editorSceneInput,
+            this.state.editorCode,
+            this.props.access
+        );
+
+        if (
+            response.response !== undefined &&
+            response.response.status === 401
+        ) {
+            this.setState({ showLoginModal: true });
+        } else if (
+            response.response !== undefined &&
+            response.response.status === 400
+        ) {
+            console.log(response.response.data.error);
+            // they probably gave an illegal filename
+        } else {
             this.setState({
                 editorFilename: response.data.filename,
-                editorSaveMessage: "saved",
-            })
+                editorSaveMessage: "saved"
+            });
             // TODO: factor from here and RenderResponse
-            if ('authorization' in response.headers) {
-                this.props.onSignUp(response.headers['authorization']);
+            if ("authorization" in response.headers) {
+                this.props.onSignUp(response.headers["authorization"]);
             }
-        })
-        .catch(error => {
-            if (error.response !== undefined &&
-                error.response.status === 401) {
-                this.setState({showLoginModal: true});
-            }
-            if (error.response !== undefined &&
-                error.response.status === 400) {
-                console.log(error.response.data.error);
-                // they probably gave an illegal filename
-                this.setState({});
-            }
-        });
-    }
+        }
+    };
 
     render() {
-        let login_info = '';
-        if (this.props.username.length !== 0) {
-            login_info = (
-                <div className='account-info'>
-                    <div className="banner-button emphatic-button files-button">
-                        <img
-                            className="file-image"
-                            src={fileImage}
-                            alt="file"
-                        />
-                        Your Files
-                    </div>
-                    <div
-                        className="banner-button logout-button"
-                        onClick={this.logOut}>Log Out</div>
-                    <div className="username">
-                        {this.props.username}
-                    </div>
-                    <div className="user-image-background">
-                        <img
-                            className="user-image"
-                            src={anonymousUser}
-                            alt='user'
-                        />
-                    </div>
-                </div>
-            );
-        } else {
-            login_info = (
-                <div className="account-info">
-                    <NavLink
-                        to={{
-                            pathname: "/login",
-                            state: {from: "/"}
-                        }}
-                        className="login">
-                        <div className="banner-button login-button">
-                            Log In
-                        </div>
-                    </NavLink>
-                    <NavLink
-                        to={{
-                            pathname: "/signup",
-                            state: {from: "/"}
-                        }}
-                        id="signup-button">
-                        <div className="banner-button emphatic-button">
-                            Sign Up
-                        </div>
-                    </NavLink>
-                </div>
-            )
-        }
-        let loginModal = this.state.showLoginModal ?
-            <div
-                className="modal-background"
-                closeonclick="true"
-                onClick={this.handleModalClick}
-            >
-                <img
-                    className="close-icon"
-                    src={closeIcon}
-                    alt="close"
-                    closeonclick="true"
-                />
-                <Login
-                    controlUrl={false}
-                    onAuth={(response) => {
-                        this.setState({showLoginModal: false});
-                        this.props.onAuth(response);
-                        this.restoreSession(this.props.access);
-                    }}
-                />
-            </div> : null;
-        let resetModal = this.state.showProjectResetModal ?
-            <div
-                className="modal-background"
-                closeonclick="true"
-                onClick={this.handleModalClick}
-            >
-                <img
-                    className="close-icon"
-                    src={closeIcon}
-                    alt="close"
-                    closeonclick="true"
-                />
-                <div className="reset-modal">
-                    <div className="reset-confirmation-container">
-                        <div className="reset-confirmation">
-                            Are you sure you want to reset
-                            to the original project?
-                        </div>
-                    </div>
-                    <div className="reset-buttons">
-                        <div
-                            className="banner-button danger-button"
-                            onClick={() => {
-                                this.setState({showProjectResetModal: false});
-                                this.resetProject();
-                            }}
-                        >
-                            Reset Project
-                        </div>
-                        <div
-                            className="banner-button emphatic-button"
-                            onClick={() => {
-                                this.setState({showProjectResetModal: false});
-                            }}
-                        >
-                            Go Back
-                        </div>
-                    </div>
-                </div>
-            </div> : null;
         return (
             <div className="page-container">
                 <div className="header">
@@ -987,7 +634,10 @@ class App extends React.Component {
                             </div>
                         </div>
                     </NavLink>
-                    {login_info}
+                    <LoginInfo
+                        username={this.props.username}
+                        logOut={this.logOut}
+                    />
                 </div>
                 <div className="app-container">
                     <NotVideo
@@ -1004,15 +654,19 @@ class App extends React.Component {
                         animating={this.state.editorAnimating}
                         code={this.state.editorCode}
                         cursor={this.state.editorCursor}
-                        filename={this.getPathBaseName(this.state.editorFilename)}
+                        filename={this.getPathBaseName(
+                            this.state.editorFilename
+                        )}
                         filenameInput={this.state.editorFilenameInput}
                         files={this.state.editorFiles}
-                        readOnly={this.state.displayingLibraryCode || this.props.access.length === 0}
+                        readOnly={
+                            this.state.displayingLibraryCode ||
+                            this.props.access.length === 0
+                        }
                         renderStatus={this.state.editorRenderStatus}
                         saveMessage={this.state.editorSaveMessage}
                         sceneInput={this.state.editorSceneInput}
                         expandedKeys={this.state.treeExpandedKeys}
-
                         onAnimationComplete={this.handleAnimationComplete}
                         onCodeChange={this.handleCodeChange}
                         onFileDelete={this.handleFileDelete}
@@ -1023,25 +677,34 @@ class App extends React.Component {
                         onInputSceneChange={this.handleInputSceneChange}
                         onNewFile={this.handleNewFile}
                         onNewFileName={this.handleNewFileName}
-                        onRender={this.handleRender} 
+                        onRender={this.handleRender}
                         onRenderCanceled={this.handleRenderCanceled}
                         onSave={this.handleSave}
                         onSceneChange={this.handleSceneChange}
                         onSetAutosaveTimeout={this.handleSetAutosaveTimeout}
                         onToggle={this.handleToggle}
                         onProjectReset={this.handleProjectReset}
-
                         onTreeChange={this.treeChange}
                         onTreeExpand={this.handleTreeExpand}
                         onFileFetch={this.fetchFileContents}
                         onDirFetch={this.fetchDirectoryContents}
                     />
                 </div>
-                {loginModal}
-                {resetModal}
+                {this.state.showLoginModal && (
+                    <LoginModal
+                        handleModalClick={this.handleModalClick}
+                        loginSuccess={this.loginSuccess}
+                    />
+                )}
+                {this.state.showProjectResetModal && (
+                    <ResetModal
+                        handleModalClick={this.handleModalClick}
+                        handleResetProject={this.handleResetProject}
+                    />
+                )}
             </div>
         );
     }
-};
+}
 
 export default withRouter(withCookies(App));
