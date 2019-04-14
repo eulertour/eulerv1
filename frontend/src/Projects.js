@@ -140,16 +140,22 @@ class Projects extends React.Component {
     state = {
         drawerOpen: false,
         sharedProjects: true,
-        projects: ['project1', 'project2'],
+        projects: [],
         searchInput: '',
     }
 
     chooseProject = (name) => {
-        console.log('chose ' + name);
+        alert('chose ' + name);
     }
 
     handleDrawerToggle = () => {
         this.setState({drawerOpen: !this.state.drawerOpen});
+    }
+
+    checkSearch = (e) => {
+        if (e.keyCode === 13) {
+            alert('search ' + this.state.searchInput);
+        }
     }
 
     render() {
@@ -196,7 +202,8 @@ class Projects extends React.Component {
                          <TextField
                            variant="outlined"
                            value={searchInput}
-                           onChange={(e) => {this.setState({searchInput: e.target.value})}}
+                           onKeyDown={this.checkSearch}
+                           onChange={(e) => this.setState({searchInput: e.target.value})}
                            InputProps={{
                              placeholder:"Search…",
                              classes:{
