@@ -151,6 +151,7 @@ sup {
   padding: 0 12px 8px 12px;
   box-sizing: border-box;
   background-color: #f1f1f1;
+  height: 100%;
   overflow: auto;
 }
 
@@ -909,5 +910,5 @@ i.collapsed:before {
 }
 
 .tree-part.collapsed .collapse-button{
-  visibility: hidden;
+  display: none;
 }
