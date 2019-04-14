@@ -900,15 +900,14 @@ i.collapsed:before {
   background-color: #FFFFFF;
 }
 
-
-.tree-part .collapsed {
-  flex: 0 1 15%;
-}
-
 .tree-part {
   transition: flex 0.3s ease-in-out;
 }
 
 .tree-part.collapsed {
   flex: 0 1 0;
+}
+
+.tree-part.collapsed .collapse-button{
+  visibility: hidden;
 }
