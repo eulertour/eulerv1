@@ -21,6 +21,7 @@ sup {
   margin-bottom: 20px;
   box-shadow: 2px 6px 10px 0 rgba(115, 143, 147, .4);
   height: 70px;
+  min-height: 70px;
   display: flex;
   justify-content: space-between;
   align-items: center;
