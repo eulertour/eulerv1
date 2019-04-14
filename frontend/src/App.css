@@ -14,6 +14,7 @@ sup {
   font-family: 'Lato', sans-serif;
   display: flex;
   flex-direction: column;
+  height:100vh;
 }
 
 .header {
@@ -144,11 +145,12 @@ sup {
 .app-container {
   display: flex;
   justify-content: space-between;
-  height: calc(100vh - 90px);
+  /* height: calc(100vh - 90px); */
   /* vh means viewport height */
   padding: 0 12px 8px 12px;
   box-sizing: border-box;
   background-color: #f1f1f1;
+  overflow: auto;
 }
 
 .manim-output {
@@ -895,4 +897,17 @@ i.collapsed:before {
   height: 350px;
   width: 440px;
   background-color: #FFFFFF;
+}
+
+
+.tree-part .collapsed {
+  flex: 0 1 15%;
+}
+
+.tree-part {
+  transition: flex 0.3s ease-in-out;
+}
+
+.tree-part.collapsed {
+  flex: 0 1 0;
 }

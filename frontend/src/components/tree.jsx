@@ -195,7 +195,7 @@ class TreeExample extends React.PureComponent {
 
     render() {
         return (
-            <div className="tree-part">
+            <div className={this.props.treeCollapsed ? "tree-part collapsed" : "tree-part"}>
                 <div className="tree-banner">
                     <div id="tree-label">Files</div>
                     <div className="tree-buttons">
