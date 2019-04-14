@@ -102,26 +102,25 @@ class Editor extends Component {
         return (
             <div className="manim-input">
                 <div className="editor-container">
-                    {this.state.treeCollapsed ? null : (
-                        <TreeExample
-                            files={this.props.files}
-                            cursor={this.props.cursor}
-                            animating={this.props.animating}
-                            expandedKeys={this.props.expandedKeys}
-                            onAnimationComplete={this.props.onAnimationComplete}
-                            onFileDelete={this.props.onFileDelete}
-                            onFileMove={this.props.onFileMove}
-                            onFileRename={this.props.onFileRename}
-                            onNewFile={this.props.onNewFile}
-                            onNewFileName={this.props.onNewFileName}
-                            onToggle={this.props.onToggle}
-                            onTreeToggle={this.handleTreeToggle}
-                            onTreeChange={this.props.onTreeChange}
-                            onTreeExpand={this.props.onTreeExpand}
-                            onFileFetch={this.props.onFileFetch}
-                            onDirFetch={this.props.onDirFetch}
-                        />
-                    )}
+                    <TreeExample
+                        treeCollapsed={this.state.treeCollapsed}
+                        files={this.props.files}
+                        cursor={this.props.cursor}
+                        animating={this.props.animating}
+                        expandedKeys={this.props.expandedKeys}
+                        onAnimationComplete={this.props.onAnimationComplete}
+                        onFileDelete={this.props.onFileDelete}
+                        onFileMove={this.props.onFileMove}
+                        onFileRename={this.props.onFileRename}
+                        onNewFile={this.props.onNewFile}
+                        onNewFileName={this.props.onNewFileName}
+                        onToggle={this.props.onToggle}
+                        onTreeToggle={this.handleTreeToggle}
+                        onTreeChange={this.props.onTreeChange}
+                        onTreeExpand={this.props.onTreeExpand}
+                        onFileFetch={this.props.onFileFetch}
+                        onDirFetch={this.props.onDirFetch}
+                    />
                     <div className="editor-part">
                         {this.getFileBanner()}
                         <CodeMirror
