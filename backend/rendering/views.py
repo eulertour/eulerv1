@@ -600,5 +600,10 @@ class Projects(generics.GenericAPIView):
     authentication_classes = (JWTAuthentication,)
     permission_classes = ()
 
-    def post(self, request):
-        return Response({'info': 'hi'})
+    def get(self, request):
+        projects = os.listdir(settings.OLD_PROJECTS_DIR)
+        projects.sort(
+            key=lambda x:
+                (os.path.isfile(os.path.join(settings.OLD_PROJECTS_DIR, x)), x)
+        )
+        return Response({'projects': projects})

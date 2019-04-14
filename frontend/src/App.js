@@ -105,7 +105,7 @@ class App extends React.Component {
                 if (obj['library']) {
                     obj['readOnly'] = true;
                 }
-        obj['id'] = obj['name'];
+                obj['id'] = obj['name'];
                 return obj;
             });
             this.setState({
