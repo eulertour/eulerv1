@@ -40,10 +40,10 @@ from .models import (
     in_directory,
 )
 from .serializers import (
-    UserSerializer, 
-    SaveModuleSerializer, 
-    ProfileSerializer, 
-    RegistrationSerializer, 
+    UserSerializer,
+    SaveModuleSerializer,
+    ProfileSerializer,
+    RegistrationSerializer,
     ProjectSerializer,
 )
 from . import manimjob
@@ -54,6 +54,7 @@ LIBRARY_DIR_ENTRY = {
     'library': True,
     'project': 'manim',
 }
+
 
 class LogIn(views.APIView):
     permission_classes = ()
@@ -94,6 +95,7 @@ class LogIn(views.APIView):
         jwtResponse = Response(serializer.validated_data, status=status.HTTP_200_OK)
         jwtResponse.data['username'] = user.username
         return jwtResponse
+
 
 class SignUp(generics.GenericAPIView):
     permission_classes = ()
@@ -154,6 +156,7 @@ class SignUp(generics.GenericAPIView):
         jwtResponse.data['username'] = new_user.username
         return jwtResponse
 
+
 class Session(generics.RetrieveAPIView):
     authentication_classes = (JWTAuthentication,)
     permission_classes = ()
@@ -167,7 +170,7 @@ class Session(generics.RetrieveAPIView):
             project_name = settings.DEFAULT_PROJECT
             project_source_path = os.path.join(
                 settings.MEDIA_ROOT,
-                settings.SHARED_MEDIA_DIR, 
+                settings.SHARED_MEDIA_DIR,
                 settings.PROJECT_DIR,
                 project_name,
                 settings.SOURCE_DIR,
@@ -189,7 +192,7 @@ class Session(generics.RetrieveAPIView):
                 project_name = settings.DEFAULT_PROJECT
             project_source_path = os.path.join(
                 settings.MEDIA_ROOT,
-                settings.USER_MEDIA_DIR, 
+                settings.USER_MEDIA_DIR,
                 request.user.username,
                 settings.PROJECT_DIR,
                 project_name,
@@ -224,10 +227,11 @@ class Session(generics.RetrieveAPIView):
                 'code': response_file.read(),
                 'scene': response_scene,
                 'files': [LIBRARY_DIR_ENTRY] +
-                         list_directory_contents(project_source_path, project_name),
+                list_directory_contents(project_source_path, project_name),
                 'project': project_name,
             })
         return Response(response_data)
+
 
 class VideoAuth(generics.GenericAPIView):
     authentication_classes = (JWTAuthentication,)
@@ -244,6 +248,7 @@ class VideoAuth(generics.GenericAPIView):
         if is_user_path(media_path, request.user.username):
             return Response(status=status.HTTP_200_OK)
         return Response(status=status.HTTP_403_FORBIDDEN)
+
 
 class Render(generics.GenericAPIView):
     authentication_classes = (JWTAuthentication,)
@@ -280,6 +285,7 @@ class Render(generics.GenericAPIView):
         response_data['job_id'] = result.id
         return Response(response_data)
 
+
 class CheckRenderJob(generics.GenericAPIView):
     authentication_classes = ()
     permission_classes = ()
@@ -298,6 +304,7 @@ class CheckRenderJob(generics.GenericAPIView):
             return Response(response_data)
         else:
             return Response({'status': 'unknown scene'})
+
 
 class Save(generics.GenericAPIView):
     authentication_classes = (JWTAuthentication,)
@@ -407,6 +414,7 @@ class Save(generics.GenericAPIView):
             module_serializer = SaveModuleSerializer(module)
             return Response(module_serializer.data)
 
+
 class Files(generics.GenericAPIView):
     authentication_classes = (JWTAuthentication,)
     permission_classes = ()
@@ -469,6 +477,7 @@ class Files(generics.GenericAPIView):
         else:
             return Response(get_file_contents(path))
 
+
 class ProjectDelete(generics.DestroyAPIView):
     authentication_classes = (JWTAuthentication,)
     permission_classes = (IsAuthenticated, IsOwner)
@@ -515,10 +524,11 @@ class ProjectDelete(generics.DestroyAPIView):
                 'code': response_file.read(),
                 'scene': settings.DEFAULT_PROJECT_SCENE,
                 'files': [LIBRARY_DIR_ENTRY] +
-                         list_directory_contents(project_source_path, new_project.name),
+                list_directory_contents(project_source_path, new_project.name),
                 'project': new_project.name,
             })
         return Response(response_data)
+
 
 class ModuleDelete(generics.DestroyAPIView):
     authentication_classes = (JWTAuthentication,)
@@ -542,7 +552,7 @@ class ModuleDelete(generics.DestroyAPIView):
             project=project,
             source=file_path,
         )
-    
+
     def delete(self, request, *args, **kwargs):
         if request.query_params['directory'] == '1':
             directory_path = get_valid_media_path(
@@ -557,12 +567,12 @@ class ModuleDelete(generics.DestroyAPIView):
         else:
             return super(ModuleDelete, self).delete(request, *args, **kwargs)
 
+
 def list_directory_contents(path, project):
     ret = []
     entries = os.listdir(path)
     entries.sort(key=lambda x:
-        (os.path.isfile(os.path.join(path, x)), x)
-    )
+                 (os.path.isfile(os.path.join(path, x)), x))
     ignored_entries = ['__pycache__', 'files', 'media_dir.txt']
     for entry in entries:
         if entry in ignored_entries:
@@ -581,5 +591,14 @@ def list_directory_contents(path, project):
         ret.append(obj)
     return ret
 
+
 def get_file_contents(file_path):
-    return { 'content': open(file_path).read() }
+    return {'content': open(file_path).read()}
+
+
+class Projects(generics.GenericAPIView):
+    authentication_classes = (JWTAuthentication,)
+    permission_classes = ()
+
+    def post(self, request):
+        return Response({'info': 'hi'})

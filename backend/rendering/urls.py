@@ -13,6 +13,8 @@ urlpatterns = [
     path('render/', views.Render.as_view()),
     path('render/<job_id>', views.CheckRenderJob.as_view()),
 
+    path('projects/', views.Projects.as_view()),
+
     path('save/', views.Save.as_view()),
     path('files/', views.Files.as_view()),
     path('project/', views.ProjectDelete.as_view()),
