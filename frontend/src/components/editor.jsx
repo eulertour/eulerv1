@@ -8,6 +8,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { faEraser } from "@fortawesome/free-solid-svg-icons";
 import { RenderButton } from "./RenderButton";
+import { Tooltip } from "@material-ui/core";
 require("codemirror/lib/codemirror.css");
 require("codemirror/theme/material.css");
 require("codemirror/theme/neat.css");
@@ -70,19 +71,23 @@ class Editor extends Component {
             </div>
         );
         let saveButton = (
-            <img
-                className="file-banner-button"
-                src={saveIcon}
-                alt="save"
-                onClick={this.props.onSave}
-            />
+            <Tooltip title="Save Project" placement="top">
+                <img
+                    className="file-banner-button"
+                    src={saveIcon}
+                    alt="save"
+                    onClick={this.props.onSave}
+                />
+            </Tooltip>
         );
         let projectEraseButton = (
-            <FontAwesomeIcon
-                className="file-banner-button eraser"
-                icon={["fas", "eraser"]}
-                onClick={this.props.onProjectReset}
-            />
+            <Tooltip title="Erase Project" placement="top">
+                <FontAwesomeIcon
+                    className="file-banner-button eraser"
+                    icon={["fas", "eraser"]}
+                    onClick={this.props.onProjectReset}
+                />
+            </Tooltip>
         );
         return (
             <div className="filename-container">
