@@ -71,7 +71,7 @@ class Editor extends Component {
             </div>
         );
         let saveButton = (
-            <Tooltip title="Save Project" placement="top">
+            <Tooltip title="Save File" placement="top">
                 <img
                     className="file-banner-button"
                     src={saveIcon}
