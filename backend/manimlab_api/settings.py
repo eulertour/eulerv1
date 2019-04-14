@@ -30,6 +30,11 @@ LIBRARY_DIR = os.path.join(
     SHARED_MEDIA_DIR,
     'manim/',
 )
+OLD_PROJECTS_DIR = os.path.join(
+    MEDIA_ROOT,
+    LIBRARY_DIR,
+    'old_projects/',
+)
 
 DEFAULT_PROJECT = 'default'
 DEFAULT_PROJECT_FILENAME = 'example_scenes.py'
@@ -54,49 +59,51 @@ RENDER_GROUP = 'etr-render'
 #         },
 #     },
 # }
-LOGGING_CONFIG = None
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': True,
-    'formatters': {
-        'django.server': {
-            '()': 'django.utils.log.ServerFormatter',
-            'format': '[{server_time}] {message}',
-            'style': '{',
-        }
-    },
-    'handlers': {
-        'file': {
-            'level': 'INFO',
-            'class': 'logging.FileHandler',
-            'filename': 'manimlab_api/debug.log',
-            'formatter': 'django.server',
-        },
-        'console': {
-            'level': 'INFO',
-            'class': 'logging.StreamHandler',
-            'formatter': 'django.server',
-        },
-        'mail_admins': {
-            'level': 'ERROR',
-            'class': 'django.utils.log.AdminEmailHandler'
-        }
-    },
-    'loggers': {
-        'django': {
-            'handlers': ['file', 'mail_admins'],
-            'level': 'INFO',
-        },
-        'django.request': {
-            'handlers': ['file'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-    }
-}
 
-import logging.config
-logging.config.dictConfig(LOGGING)
+if os.getenv('DJANGO_CONFIGURE_LOGGING', '1') == '1':
+    LOGGING_CONFIG = None
+    LOGGING = {
+        'version': 1,
+        'disable_existing_loggers': True,
+        'formatters': {
+            'django.server': {
+                '()': 'django.utils.log.ServerFormatter',
+                'format': '[{server_time}] {message}',
+                'style': '{',
+            }
+        },
+        'handlers': {
+            'file': {
+                'level': 'INFO',
+                'class': 'logging.FileHandler',
+                'filename': 'manimlab_api/debug.log',
+                'formatter': 'django.server',
+            },
+            'console': {
+                'level': 'INFO',
+                'class': 'logging.StreamHandler',
+                'formatter': 'django.server',
+            },
+            'mail_admins': {
+                'level': 'ERROR',
+                'class': 'django.utils.log.AdminEmailHandler'
+            }
+        },
+        'loggers': {
+            'django': {
+                'handlers': ['file', 'mail_admins'],
+                'level': 'INFO',
+            },
+            'django.request': {
+                'handlers': ['file'],
+                'level': 'INFO',
+                'propagate': False,
+            },
+        }
+    }
+
+    import logging.config
+    logging.config.dictConfig(LOGGING)
 
 DOMAIN = os.getenv('DJANGO_DOMAIN', 'eulertour.com')
 
@@ -186,9 +193,7 @@ CORS_ORIGIN_WHITELIST = (
     'www.'+ DOMAIN,
     'api.' + DOMAIN,
     DOMAIN + ':3000',
-    DOMAIN + ':3000/',
 )
-CORS_ORIGIN_ALLOW_ALL = True
 
 X_FRAME_OPTIONS = 'DENY'
 SESSION_SAVE_EVERY_REQUEST = True

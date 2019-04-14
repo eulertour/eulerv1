@@ -37,8 +37,7 @@ sup {
 }
 
 .projects-logo-container {
-  position: absolute;
-  left: 0;
+  margin-right: 50px;
 }
 
 .banner-logo {

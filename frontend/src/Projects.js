@@ -17,9 +17,8 @@ import PropTypes from 'prop-types';
 import MenuIcon from '@material-ui/icons/Menu';
 import SearchIcon from '@material-ui/icons/Search';
 import { fade } from '@material-ui/core/styles/colorManipulator';
-import Card from '@material-ui/core/Card';
-import CardContent from '@material-ui/core/CardContent';
-import CardActionArea from '@material-ui/core/CardActionArea';
+import axios from 'axios';
+import * as consts from './constants.js';
 
 
 const drawerWidth = 260;
@@ -120,7 +119,7 @@ const styles = theme => ({
   },
   toolbar: {
       display: 'flex',
-      justifyContent: 'space-around',
+      justifyContent: 'flex-start',
       ...theme.mixins.toolbar,
   },
   colorBlack: {
@@ -153,9 +152,28 @@ class Projects extends React.Component {
     }
 
     checkSearch = (e) => {
-        if (e.keyCode === 13) {
-            alert('search ' + this.state.searchInput);
+        if (e.keyCode !== 13) {
+            return;
         }
+    }
+
+    getHeadersDict(accessToken) {
+        return accessToken.length !== 0 ?
+            {'Authorization': 'Bearer ' + this.props.access} :
+            {};
+    }
+
+    componentDidMount = () => {
+        axios.get(consts.PROJECTS_URL, {
+            params: {q: this.state.searchInput},
+            headers: this.getHeadersDict(this.props.access),
+        })
+        .then(response => {
+            this.setState({projects: response.data.projects})
+        })
+        .catch(error => {
+            console.log(error.response);
+        });
     }
 
     render() {

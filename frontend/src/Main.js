@@ -100,7 +100,10 @@ class Main extends React.Component {
                     }/>
                     <Route path="/projects" render={() =>
                         <MuiThemeProvider theme={theme}>
-                            <Projects />
+                            <Projects
+                                access={this.state.access}
+                                refresh={this.state.refresh}
+                            />
                         </MuiThemeProvider>
                     }/>
                 </Switch>
