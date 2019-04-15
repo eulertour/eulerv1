@@ -6,6 +6,8 @@ services:
       - 9000:9000
     volumes:
       - ${PWD}:/opt/eulertour
+    environment:
+      - DJANGO_EXTRA_CORS_WHITELIST=localhost:3000,${DOMAIN:?DOMAIN environment variable isn't set}:3000
   frontend:
     ports:
       - 3000:3000
