@@ -14,12 +14,14 @@ sup {
   font-family: 'Lato', sans-serif;
   display: flex;
   flex-direction: column;
+  height:100vh;
 }
 
 .header {
   margin-bottom: 20px;
   box-shadow: 2px 6px 10px 0 rgba(115, 143, 147, .4);
   height: 70px;
+  min-height: 70px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -149,11 +151,13 @@ sup {
 .app-container {
   display: flex;
   justify-content: space-between;
-  height: calc(100vh - 90px);
+  /* height: calc(100vh - 90px); */
   /* vh means viewport height */
   padding: 0 12px 8px 12px;
   box-sizing: border-box;
   background-color: #f1f1f1;
+  height: 100%;
+  overflow: auto;
 }
 
 .manim-output {
@@ -900,4 +904,16 @@ i.collapsed:before {
   height: 350px;
   width: 440px;
   background-color: #FFFFFF;
+}
+
+.tree-part {
+  transition: flex 0.3s ease-in-out;
+}
+
+.tree-part.collapsed {
+  flex: 0 1 0;
+}
+
+.tree-part.collapsed .collapse-button{
+  display: none;
 }
