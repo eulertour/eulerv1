@@ -111,6 +111,11 @@ export function newFileName(
     siblingList,
     nodeCopy,
     filesCopy,
+    project,
+    changeSubtreeIds,
+    treeExpandedKeys,
+    editorFilename,
+    editorCursor,
     access
 ) {
     return axios
@@ -120,7 +125,7 @@ export function newFileName(
         .then(response => {
             nodeCopy["untitled"] = false;
             nodeCopy["name"] = name;
-            nodeCopy["project"] = this.state.project;
+            nodeCopy["project"] = project;
             let oldId = nodeCopy.id;
             let newId;
             if ("directory" in nodeCopy) {
@@ -128,8 +133,8 @@ export function newFileName(
             } else {
                 newId = name;
             }
-            this.changeSubtreeIds(nodeCopy, oldId, newId);
-            let expandedKeysCopy = _.cloneDeep(this.state.treeExpandedKeys);
+            changeSubtreeIds(nodeCopy, oldId, newId);
+            let expandedKeysCopy = _.cloneDeep(treeExpandedKeys);
             for (let i = 0; i < expandedKeysCopy.length; i++) {
                 if (
                     expandedKeysCopy[i].startsWith(oldId + "/") ||
@@ -174,14 +179,14 @@ export function newFileName(
             } else {
                 nodeCopy.directory.children = libraryDirs.concat(fileArray);
             }
-            let newFilename = this.state.editorFilename;
-            let newCursor = this.state.editorCursor;
-            if (!_.isEmpty(this.state.editorCursor)) {
+            let newFilename = editorFilename;
+            let newCursor = editorCursor;
+            if (!_.isEmpty(editorCursor)) {
                 let cursorMaybe = utils.getNodeFromPathList(
                     filesCopy,
-                    utils.getNodePathList(this.state.editorCursor)
+                    utils.getNodePathList(editorCursor)
                 );
-                if (this.state.editorCursor.name !== cursorMaybe.name) {
+                if (editorCursor.name !== cursorMaybe.name) {
                     newFilename = utils.getNodePathList(nodeCopy).join("/");
                     newCursor = nodeCopy;
                 }
@@ -343,12 +348,12 @@ export function postRender(
         });
 }
 
-export function fetchRestoreSession(access, editorFilename, project) {
+export function fetchRestoreSession(access, editorFilename, project, logout) {
+    console.log("filename: " + editorFilename);
     return axios
         .post(
             consts.SESSION_URL,
             {
-                // TODO: this should be a path list
                 name: editorFilename,
                 project: project,
                 directory: true
@@ -391,7 +396,7 @@ export function fetchRestoreSession(access, editorFilename, project) {
                         "there was an error processing your token, " +
                             "please log in again"
                     );
-                    this.logOut();
+                    logout();
                 }
             }
             console.log(error.response);

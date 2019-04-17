@@ -214,6 +214,11 @@ class App extends React.Component {
             siblingList,
             nodeCopy,
             filesCopy,
+            this.state.project,
+            this.changeSubtreeIds,
+            this.state.treeExpandedKeys,
+            this.state.editorFilename,
+            this.state.editorCursor,
             this.props.access
         );
         console.log(response.response);
@@ -364,21 +369,26 @@ class App extends React.Component {
     };
 
     restoreSession = async accessToken => {
+        console.log(this.state.project);
+        console.log(this.state.editorFilename);
         const response = await fetchRestoreSession(
             accessToken,
             this.state.editorFilename,
-            this.state.project
+            this.state.project,
+            this.logOut
         );
-        this.setState({
-            editorCode: response.data.code || this.state.editorCode,
-            editorFilename: response.data.filename || this.state.editorFilename,
-            editorFilenameInput:
-                response.data.filename || this.state.editorFilenameInput,
-            editorFiles: response.files || this.state.editorFiles,
-            editorSceneInput: response.data.scene || this.state.videoScene,
-            project: response.data.project || this.state.project,
-            videoScene: response.data.scene || this.state.videoScene
-        });
+        response &&
+            this.setState({
+                editorCode: response.data.code || this.state.editorCode,
+                editorFilename:
+                    response.data.filename || this.state.editorFilename,
+                editorFilenameInput:
+                    response.data.filename || this.state.editorFilenameInput,
+                editorFiles: response.files || this.state.editorFiles,
+                editorSceneInput: response.data.scene || this.state.videoScene,
+                project: response.data.project || this.state.project,
+                videoScene: response.data.scene || this.state.videoScene
+            });
         if ("username" in response.data) {
             this.props.onSessionRestore(response.data["username"]);
         }
