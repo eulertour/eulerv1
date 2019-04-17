@@ -2,7 +2,9 @@ const DOMAIN = (process.env.REACT_APP_DOMAIN === undefined ?
                 'eulertour.com' :
                 process.env.REACT_APP_DOMAIN);
 export const MEDIA_URL = 'https://media.' + DOMAIN + '/';
-export const API_URL   = 'https://api.' + DOMAIN + '/api/';
+export const API_URL = (process.env.REACT_APP_API_URL === undefined ?
+                        'https://api.' + DOMAIN + '/api/' :
+                        process.env.REACT_APP_API_URL);
 
 export const LOGIN_URL          = API_URL + 'login/';
 export const SIGNUP_URL         = API_URL + 'signup/';
@@ -14,6 +16,7 @@ export const SAVE_URL           = API_URL + 'save/';
 export const GET_FILES_URL      = API_URL + 'files/';
 export const PROJECT_DELETE_URL = API_URL + 'project/';
 export const MODULE_DELETE_URL  = API_URL + 'module/';
+export const PROJECTS_URL       = API_URL + 'projects/';
 
 export const CHECK_RENDER_INTERVAL_MS = 2 * 1000;
 export const AUTOSAVE_TIMEOUT_MS = 5 * 1000;
