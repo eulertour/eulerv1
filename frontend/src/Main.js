@@ -4,6 +4,19 @@ import { withCookies, CookiesProvider } from 'react-cookie';
 import App from './App.js';
 import LoginPage from './LoginPage.js';
 import Home from './Home.js';
+import Projects from './Projects.js';
+import { MuiThemeProvider, createMuiTheme } from '@material-ui/core/styles';
+
+const theme = createMuiTheme({
+    palette: {
+        primary: {
+            main: "#b43daf",
+            light: "#c363bf",
+            dark: "#7d2a7a",
+        },
+    },
+    typography: { useNextVariants: true },
+});
 
 class Main extends React.Component {
     constructor(props, context) {
@@ -84,6 +97,14 @@ class Main extends React.Component {
                             onAuth={this.handleAuth}
                             onSessionRestore={this.handleSessionRestore}
                         />
+                    }/>
+                    <Route path="/projects" render={() =>
+                        <MuiThemeProvider theme={theme}>
+                            <Projects
+                                access={this.state.access}
+                                refresh={this.state.refresh}
+                            />
+                        </MuiThemeProvider>
                     }/>
                 </Switch>
             </BrowserRouter>

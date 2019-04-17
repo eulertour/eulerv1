@@ -1,7 +1,7 @@
 # Run with e.g. FRONTEND_CONFIG_PATH=/etc/eulertour/frontend \
 #               BACKEND_DATA_PATH=/srv/eulertour/backend \
 #               COMPOSE_PROJECT_NAME=eulertour \
-#               DOMAIN=eulertour.dev docker-compose up
+#               DOMAIN=dev.eulertour.com docker-compose up
 version: '3.1'
 
 services:
