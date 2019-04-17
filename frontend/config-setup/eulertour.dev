@@ -13,7 +13,7 @@ server {
 server {
 	listen 443;
 	listen [::]:443;
-	server_name eulertour.dev;
+	server_name dev.eulertour.com;
 	return 301 https://www.$host$request_uri;
 }
 
@@ -21,17 +21,17 @@ upstream api.nginx {
     server backend:8000;
 }
 
-server {                                                                        
+server {
 	listen 443 ssl http2;
 	listen [::]:443 ssl http2;
-    server_name api.eulertour.dev;    
-    charset utf-8;    
-    client_max_body_size 75M;    
-    location / {    
+    server_name api.dev.eulertour.com;
+    charset utf-8;
+    client_max_body_size 75M;
+    location / {
         allow all;
         proxy_http_version 1.1;
-        proxy_pass https://api.nginx;    
-    }    
+        proxy_pass https://api.nginx;
+    }
 }
 
 # main server block
@@ -42,7 +42,7 @@ server {
 	root /var/www/etr-frontend/build;
 	index index.html index.htm index.php;
 
-	server_name www.eulertour.dev;
+	server_name www.dev.eulertour.com;
 
 	# enable subfolder method reverse proxy confs
 	include /config/nginx/proxy-confs/*.subfolder.conf;
@@ -78,33 +78,33 @@ server {
 
 }
 
-server {                                                                         
+server {
     listen 443 ssl;
     listen [::]:443 ssl;
 
-    server_name media.eulertour.dev;                                                                                                                                
-                                                                                 
-    root /srv/data;                                   
-                                                                                 
-    location / {                                                                 
-        autoindex on;                                                            
-        try_files $uri $uri/ =404;                                               
-        auth_request /auth;                                                      
-    }                                                                            
-                                                                                 
-    location /auth {                                                             
-        internal;                                                                
-        set $query '';                                                           
-        if ($request_uri ~ "([^\?]+)\?jwt=([^&]+)(&.*)?$") {                     
-            set $orig_uri $1;                                                    
-            set $auth $2;                                                        
-        }                                                                        
-        proxy_pass_request_body off;                                             
-        proxy_set_header        Authorization "Bearer ${auth}";                  
-        proxy_set_header        X-Original-URI $orig_uri;                        
-        proxy_set_header        Content-Length "";                               
-        proxy_pass              https://api.eulertour.dev/api/video/;            
-    }                                                                            
+    server_name media.dev.eulertour.com;
+
+    root /srv/data;
+
+    location / {
+        autoindex on;
+        try_files $uri $uri/ =404;
+        auth_request /auth;
+    }
+
+    location /auth {
+        internal;
+        set $query '';
+        if ($request_uri ~ "([^\?]+)\?jwt=([^&]+)(&.*)?$") {
+            set $orig_uri $1;
+            set $auth $2;
+        }
+        proxy_pass_request_body off;
+        proxy_set_header        Authorization "Bearer ${auth}";
+        proxy_set_header        X-Original-URI $orig_uri;
+        proxy_set_header        Content-Length "";
+        proxy_pass              https://api.dev.eulertour.com/api/video/;
+    }
 }
 
 # sample reverse proxy config without url base, but as a subdomain "cp", ip and port same as above

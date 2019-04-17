@@ -194,7 +194,7 @@ CORS_ORIGIN_WHITELIST = (
     'api.' + DOMAIN,
 )
 CORS_ORIGIN_WHITELIST += tuple(
-    os.getenv('DJANGO_EXTRA_CORS_WHITELIST', []).split(',')
+    os.getenv('DJANGO_EXTRA_CORS_WHITELIST', '').split(',')
 )
 
 X_FRAME_OPTIONS = 'DENY'
