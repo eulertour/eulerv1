@@ -102,8 +102,8 @@ if os.getenv('DJANGO_CONFIGURE_LOGGING', '1') == '1':
         }
     }
 
-    import logging.config
-    logging.config.dictConfig(LOGGING)
+import logging.config
+logging.config.dictConfig(LOGGING)
 
 DOMAIN = os.getenv('DJANGO_DOMAIN', 'eulertour.com')
 
