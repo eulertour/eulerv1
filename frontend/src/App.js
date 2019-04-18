@@ -130,7 +130,7 @@ class App extends React.Component {
             : {};
     };
 
-    changeSubtreeIds(node, oldIdPrefix, newIdPrefix) {
+    changeSubtreeIds = (node, oldIdPrefix, newIdPrefix) => {
         if ("id" in node && node.id.startsWith(oldIdPrefix)) {
             node.id = newIdPrefix + node.id.slice(oldIdPrefix.length);
         }
