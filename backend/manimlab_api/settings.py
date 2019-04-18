@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/2.1/ref/settings/
 import os
 from datetime import timedelta
 from corsheaders.defaults import default_headers
+import logging.config
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -101,9 +102,7 @@ if os.getenv('DJANGO_CONFIGURE_LOGGING', '1') == '1':
             },
         }
     }
-
-import logging.config
-logging.config.dictConfig(LOGGING)
+    logging.config.dictConfig(LOGGING)
 
 DOMAIN = os.getenv('DJANGO_DOMAIN', 'eulertour.com')
 
