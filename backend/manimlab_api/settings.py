@@ -189,7 +189,7 @@ REST_FRAMEWORK = {
 
 CORS_ORIGIN_WHITELIST = (
     DOMAIN,
-    'www.'+ DOMAIN,
+    'www.' + DOMAIN,
     'api.' + DOMAIN,
 )
 CORS_ORIGIN_WHITELIST += tuple(
