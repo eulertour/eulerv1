@@ -6,6 +6,7 @@ backend/data/shared/manim
 backend/db.sqlite3
 backend/static
 *.mp4
+npm-debug.log
 
 # dependencies
 frontend/node_modules

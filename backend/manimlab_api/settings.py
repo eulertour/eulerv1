@@ -136,6 +136,8 @@ INSTALLED_APPS = [
     'rendering',
     'rest_framework.authtoken',
 ]
+if os.getenv('DJANGO_EXTENSIONS', '0') == '1':
+    INSTALLED_APPS += ['django_extensions']
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',

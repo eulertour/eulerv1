@@ -1,10 +1,10 @@
 const DOMAIN = (process.env.REACT_APP_DOMAIN === undefined ?
-                'eulertour.com' :
-                process.env.REACT_APP_DOMAIN);
+    'eulertour.com' :
+    process.env.REACT_APP_DOMAIN);
 export const MEDIA_URL = 'https://media.' + DOMAIN + '/';
 export const API_URL = (process.env.REACT_APP_API_URL === undefined ?
-                        'https://api.' + DOMAIN + '/api/' :
-                        process.env.REACT_APP_API_URL);
+    'https://api.' + DOMAIN + '/api/' :
+    process.env.REACT_APP_API_URL);
 
 export const LOGIN_URL          = API_URL + 'login/';
 export const SIGNUP_URL         = API_URL + 'signup/';
