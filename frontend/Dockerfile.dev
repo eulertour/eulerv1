@@ -1,3 +1,0 @@
-FROM etr-frontend
-
-RUN apk add --update npm vim

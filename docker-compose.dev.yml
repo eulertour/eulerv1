@@ -1,15 +1,24 @@
-version: '3.1'
+version: '3.4'
 
 services:
   backend:
-    ports:
-      - 9000:9000
+    build:
+      target: dev
     volumes:
       - ${PWD}:/opt/eulertour
     environment:
-      - DJANGO_EXTRA_CORS_WHITELIST=localhost:3000,${DOMAIN:?DOMAIN environment variable isn't set}:3000
+      - "DJANGO_EXTRA_CORS_WHITELIST=\
+        localhost:3000,\
+        ${DOMAIN:?DOMAIN environment variable isn't set}:3000"
+      - DJANGO_CONFIGURE_LOGGING=0
+      - DJANGO_EXTENSIONS=1
+
   frontend:
+    build:
+      target: dev
     ports:
       - 3000:3000
     volumes:
       - ${PWD}:/opt/eulertour
+    environment:
+      - REACT_APP_API_URL=https://api.${DOMAIN:?DOMAIN environment variable isn't set}:8000/api/

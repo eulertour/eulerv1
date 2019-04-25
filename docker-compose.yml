@@ -2,7 +2,7 @@
 #               BACKEND_DATA_PATH=/srv/eulertour/backend \
 #               COMPOSE_PROJECT_NAME=eulertour \
 #               DOMAIN=dev.eulertour.com docker-compose up
-version: '3.1'
+version: '3.4'
 
 services:
   backend:
@@ -19,28 +19,29 @@ services:
       - db
     environment:
       - DJANGO_MEDIA_ROOT=${BACKEND_DATA_PATH:?BACKEND_DATA_PATH environment variable isn't set}
+
   frontend:
     build:
       context: frontend/
       args:
         - domain=${DOMAIN:?DOMAIN environment variable isn't set}
-    cap_add:
-      - NET_ADMIN
-    environment:
-      - TZ=America/Los_Angeles
-      - URL=${DOMAIN:?DOMAIN environment variable isn't set}
-      - SUBDOMAINS=www,api,media
-      - EMAIL=devin@eulertour.com
-      - REACT_APP_DOMAIN=${DOMAIN:?DOMAIN environment variable isn't set}
-    volumes:
-      - ${FRONTEND_CONFIG_PATH:?FRONTEND_CONFIG_PATH environment variable isn't set}:/config
-      - ${BACKEND_DATA_PATH:?BACKEND_DATA_PATH environment variable isn't set}:/srv/data
     ports:
       - 80:80
       - 443:443
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - ${FRONTEND_CONFIG_PATH:?FRONTEND_CONFIG_PATH environment variable isn't set}:/config
+      - ${BACKEND_DATA_PATH:?BACKEND_DATA_PATH environment variable isn't set}:/srv/data
+    environment:
+      - URL=${DOMAIN:?DOMAIN environment variable isn't set}
+      - SUBDOMAINS=www,api,media
+      - TZ=America/Los_Angeles
+      - EMAIL=devin@eulertour.com
     restart: unless-stopped
     depends_on:
       - backend
+
   workers:
     build:
       context: workers/
@@ -50,8 +51,10 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - /usr/bin/docker:/usr/bin/docker
     userns_mode: "host"
+
   redis:
     image: redis:5.0.3
+
   db:
     image: postgres:9.6
     volumes:
