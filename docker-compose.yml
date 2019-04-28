@@ -13,12 +13,13 @@ services:
     ports:
       - 8000:8000
     volumes:
-      - ${FRONTEND_CONFIG_PATH:?FRONTEND_CONFIG_PATH environment variable isn't set}/keys:/var/keys
+      - ${FRONTEND_CONFIG_PATH:?FRONTEND_CONFIG_PATH environment variable isn't set}/etc/letsencrypt:/var/letsencrypt
       - ${BACKEND_DATA_PATH:?BACKEND_DATA_PATH environment variable isn't set}:/srv/data
     depends_on:
       - db
     environment:
       - DJANGO_MEDIA_ROOT=${BACKEND_DATA_PATH:?BACKEND_DATA_PATH environment variable isn't set}
+      - DOMAIN=${DOMAIN:?DOMAIN environment variable isn't set}
 
   frontend:
     build:
