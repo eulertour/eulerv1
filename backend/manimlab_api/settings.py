@@ -104,7 +104,7 @@ if os.getenv('DJANGO_CONFIGURE_LOGGING', '1') == '1':
     }
     logging.config.dictConfig(LOGGING)
 
-DOMAIN = os.getenv('DJANGO_DOMAIN', 'eulertour.com')
+DOMAIN = os.getenv('DOMAIN', 'eulertour.com')
 
 
 # Quick-start development settings - unsuitable for production

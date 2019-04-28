@@ -27,4 +27,4 @@ ENV DJANGO_SECRET_KEY fy$w7-c)4ay5^j=&h#*p!fp9yi5y8wn(nkg5w*@-ei)8wgw^fz
 RUN python -m pip install pyOpenSSL Werkzeug django-extensions
 WORKDIR /opt/eulertour/backend
 CMD tail -f /dev/null
-# python manage.py runserver_plus --cert-file=/var/keys/cert.crt --key-file=/var/keys/cert.key 0.0.0.0:8000
+# ./copy_certs.sh && python manage.py runserver_plus --cert-file=/var/keys/fullchain.crt --key-file=/var/keys/privkey.key 0.0.0.0:8000
