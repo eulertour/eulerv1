@@ -55,10 +55,4 @@ def render_scene(
     info["stderr"] = err
     info["stdout"] = out
 
-    # # unmount user files from container
-    # for device in devices:
-    #     subprocess.run([
-    #         "lxc", "config", "device", "remove", container, device,
-    #     ])
-
     return info

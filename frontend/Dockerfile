@@ -13,7 +13,7 @@ COPY --from=build /opt/build /var/www/etr-frontend/build
 # expect eulertour/frontend to be bind mounted to /opt/eulertour/frontend
 # test by going to dev.eulertour.com:3000 (no www.)
 # TODO: add redirect to dev.eulertour.com:3000 in /var/www
-FROM linuxserver/letsencrypt as dev
+FROM nginx:1.16-alpine as dev
 ARG domain
 ENV REACT_APP_DOMAIN $domain
 WORKDIR /opt/eulertour/frontend
