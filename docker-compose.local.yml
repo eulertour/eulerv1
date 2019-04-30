@@ -1,0 +1,10 @@
+version: '3.4'
+
+services:
+  frontend:
+    environment:
+      - STAGING=true
+      - REACT_APP_API_URL=http://api.localhost:8000/api/
+      - REACT_APP_MEDIA_URL=http://media.localhost/
+    volumes:
+      - ${FRONTEND_CONFIG_PATH:?FRONTEND_CONFIG_PATH environment variable isn't set}/nginx:/etc/nginx

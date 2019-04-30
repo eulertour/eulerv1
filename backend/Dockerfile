@@ -24,7 +24,11 @@ ENV DJANGO_DOMAIN $domain
 ENV DOCKER_CONTAINER 1
 ENV DJANGO_SECRET_KEY fy$w7-c)4ay5^j=&h#*p!fp9yi5y8wn(nkg5w*@-ei)8wgw^fz
 
-RUN python -m pip install pyOpenSSL Werkzeug django-extensions
+RUN python -m pip install ipdb pyOpenSSL Werkzeug django-extensions
 WORKDIR /opt/eulertour/backend
 CMD tail -f /dev/null
-# ./copy_certs.sh && python manage.py runserver_plus --cert-file=/var/keys/fullchain.crt --key-file=/var/keys/privkey.key 0.0.0.0:8000
+# devserver
+# ./copy_certs.sh && python manage.py migrate && python manage.py runserver_plus --cert-file=/var/keys/fullchain.crt --key-file=/var/keys/privkey.key 0.0.0.0:8000
+
+# local
+# python manage.py migrate && python manage.py runserver_plus 0.0.0.0:8000
