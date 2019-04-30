@@ -2,6 +2,8 @@ version: '3.4'
 
 services:
   frontend:
+    build:
+      target: local
     environment:
       - STAGING=true
       - REACT_APP_API_URL=http://api.localhost:8000/api/
