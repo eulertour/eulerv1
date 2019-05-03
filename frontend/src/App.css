@@ -9,9 +9,12 @@ sup {
   top: -0.7em;
 }
 
+#root {
+  font-family: 'Lato', sans-serif;
+}
+
 .page-container {
   background-color: #f1f1f1;
-  font-family: 'Lato', sans-serif;
   display: flex;
   flex-direction: column;
   height:100vh;

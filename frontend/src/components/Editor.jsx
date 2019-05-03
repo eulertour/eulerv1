@@ -2,7 +2,7 @@ import React, { Component } from "react";
 import { Controlled as CodeMirror } from "react-codemirror2";
 import saveIcon from "../assets/icon-save@3x.svg";
 // import settingsIcon from '../assets/icon-settings@3x.svg';
-import TreeExample from "../components/tree.jsx";
+import TreeExample from "../components/Tree.jsx";
 import collapseTreeIcon from "../assets/icon-left@3x.svg";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { library } from "@fortawesome/fontawesome-svg-core";

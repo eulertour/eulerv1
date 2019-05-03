@@ -1,7 +1,7 @@
 import React from "react";
 
 import closeIcon from "../assets/e-remove.svg";
-import Login from "./login.jsx";
+import Login from "./Login.jsx";
 
 export const LoginModal = ({ handleModalClick, loginSuccess }) => {
     return (
