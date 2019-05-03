@@ -1,7 +1,7 @@
 import React from 'react';
 import { withRouter, Redirect } from 'react-router-dom';
 import { withCookies } from 'react-cookie';
-import Login from './components/login.jsx';
+import Login from './components/Login.jsx';
 
 class LoginPage extends React.Component {
     constructor(props, context) {

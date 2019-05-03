@@ -16,7 +16,7 @@ import {
 import { faPython } from '@fortawesome/free-brands-svg-icons'
 import { Tree, Icon } from 'antd';
 import Tooltip from "@material-ui/core/Tooltip"
-import FileMenu from './menu.jsx';
+import FileMenu from './Menu.jsx';
 import * as consts from '../constants.js';
 
 const { TreeNode } = Tree;

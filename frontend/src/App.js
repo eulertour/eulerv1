@@ -4,9 +4,9 @@ import React from "react";
 import { withRouter, NavLink } from "react-router-dom";
 import { instanceOf } from "prop-types";
 import { withCookies, Cookies } from "react-cookie";
-import NotVideo from "./components/notvideo.jsx";
+import NotVideo from "./components/NotVideo.jsx";
 import * as consts from "./constants.js";
-import Editor from "./components/editor.jsx";
+import Editor from "./components/Editor.jsx";
 import logo from "./assets/etourlogo.jpg";
 import {
     resetProject,
@@ -21,8 +21,8 @@ import {
 } from "./api";
 import _ from "lodash";
 import * as utils from "./utils.js";
-import { LoginModal } from "./components/loginModal";
-import { ResetModal } from "./components/resetModal";
+import { LoginModal } from "./components/LoginModal";
+import { ResetModal } from "./components/ResetModal";
 import { LoginInfo } from "./components/LoginInfo";
 
 class App extends React.Component {
