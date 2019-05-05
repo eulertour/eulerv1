@@ -162,12 +162,17 @@ class Session(generics.RetrieveAPIView):
     permission_classes = ()
 
     def post(self, request):
+        ## import ipdb; ipdb.set_trace(context=9)
         profile = None
         response_data = {}
+        project_name = request.data.get("project", "")
+
         if request.user.is_anonymous:
+            if not project_name:
+                project_name = settings.DEFAULT_PROJECT
+
             # return the defaults
             # TODO: this response is fixed, so just return it
-            project_name = settings.DEFAULT_PROJECT
             project_source_path = os.path.join(
                 settings.MEDIA_ROOT,
                 settings.SHARED_MEDIA_DIR,
@@ -175,21 +180,30 @@ class Session(generics.RetrieveAPIView):
                 project_name,
                 settings.SOURCE_DIR,
             )
+
+            # get a file from the project
+            project_files = os.listdir(project_source_path)
+            project_files.sort(key=lambda x: (os.path.isdir(
+                os.path.join(project_source_path, x)), x))
+            default_file = project_files[0]
+
             project_file_path = os.path.join(
                 project_source_path,
-                settings.DEFAULT_PROJECT_FILENAME,
+                default_file,
             )
-            response_scene = settings.DEFAULT_PROJECT_SCENE
+            response_scene = ""
         else:
+            if not project_name:
+                if profile.last_project:
+                    project_name = profile.last_project.name
+                else:
+                    project_name = settings.DEFAULT_PROJECT
+
             response_data = {'username': request.user.username}
             profile = Profile.objects.get(user=request.user)
             use_defaults = True
             # restore previous session
             # TODO: only allow path-friendly characters for everything
-            if profile.last_project:
-                project_name = profile.last_project.name
-            else:
-                project_name = settings.DEFAULT_PROJECT
             project_source_path = os.path.join(
                 settings.MEDIA_ROOT,
                 settings.USER_MEDIA_DIR,
@@ -198,6 +212,13 @@ class Session(generics.RetrieveAPIView):
                 project_name,
                 settings.SOURCE_DIR,
             )
+
+            # get a file from the project (TODO: refactor this)
+            project_files = os.listdir(project_source_path)
+            project_files.sort(key=lambda x: (os.path.isdir(
+                os.path.join(project_source_path, x)), x))
+            default_file = project_files[0]
+
             if profile.last_module:
                 project_file_path = os.path.join(
                     project_source_path,
@@ -209,21 +230,23 @@ class Session(generics.RetrieveAPIView):
                 if not os.path.exists(project_file_path):
                     project_file_path = os.path.join(
                         project_source_path,
-                        settings.DEFAULT_PROJECT_FILENAME,
+                        default_file,
                     )
             else:
                 project_file_path = os.path.join(
                     project_source_path,
-                    settings.DEFAULT_PROJECT_FILENAME,
+                    default_file,
                 )
+
+
             if profile.last_scene:
                 response_scene = profile.last_scene
             else:
-                response_scene = settings.DEFAULT_PROJECT_SCENE
+                response_scene = ""
 
         with open(project_file_path) as response_file:
             response_data.update({
-                'filename': os.path.relpath(project_file_path, project_source_path),
+                'filename': os.path.basename(project_file_path),
                 'code': response_file.read(),
                 'scene': response_scene,
                 'files': [LIBRARY_DIR_ENTRY] +
@@ -601,9 +624,9 @@ class Projects(generics.GenericAPIView):
     permission_classes = ()
 
     def get(self, request):
-        projects = os.listdir(settings.OLD_PROJECTS_DIR)
+        projects = os.listdir(settings.SHARED_PROJECTS_PATH)
         projects.sort(
             key=lambda x:
-                (os.path.isfile(os.path.join(settings.OLD_PROJECTS_DIR, x)), x)
+                (os.path.isfile(os.path.join(settings.SHARED_PROJECTS_PATH, x)), x)
         )
         return Response({'projects': projects})

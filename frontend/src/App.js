@@ -53,7 +53,6 @@ class App extends React.Component {
             videoReload: false,
 
             autosaveTimer: -1,
-            project: "",
             renderTimer: -1,
             showFileMoveModal: false,
             showLoginModal: false,
@@ -106,7 +105,7 @@ class App extends React.Component {
         e.stopPropagation();
 
         const response = await deleteFile(
-            this.state.project,
+            this.props.project,
             this.props.access,
             data,
             this.state.editorFiles,
@@ -187,7 +186,7 @@ class App extends React.Component {
                 // TODO: this should maybe be a path list
                 // (if you want to REALLY enforce separation)
                 name: pathList.join("/"),
-                project: this.state.project,
+                project: this.props.project,
                 code: ""
             };
         } else {
@@ -197,7 +196,7 @@ class App extends React.Component {
                 // TODO: this should maybe be a path list
                 // (if you want to REALLY enforce separation)
                 name: pathList.join("/"),
-                project: this.state.project,
+                project: this.props.project,
                 // TODO: join the path from pathList
                 newName: newNamePathList.join("/")
             };
@@ -214,7 +213,7 @@ class App extends React.Component {
             siblingList,
             nodeCopy,
             filesCopy,
-            this.state.project,
+            this.props.project,
             this.changeSubtreeIds,
             this.state.treeExpandedKeys,
             this.state.editorFilename,
@@ -369,12 +368,12 @@ class App extends React.Component {
     };
 
     restoreSession = async accessToken => {
-        console.log(this.state.project);
+        console.log(this.props.project);
         console.log(this.state.editorFilename);
         const response = await fetchRestoreSession(
             accessToken,
             this.state.editorFilename,
-            this.state.project,
+            this.props.project,
             this.logOut
         );
         response &&
@@ -386,11 +385,13 @@ class App extends React.Component {
                     response.data.filename || this.state.editorFilenameInput,
                 editorFiles: response.files || this.state.editorFiles,
                 editorSceneInput: response.data.scene || this.state.videoScene,
-                project: response.data.project || this.state.project,
                 videoScene: response.data.scene || this.state.videoScene
             });
         if ("username" in response.data) {
-            this.props.onSessionRestore(response.data["username"]);
+            this.props.onFetchUsername(response.data["username"]);
+        }
+        if ("project" in response.data) {
+            this.props.onNewProject(response.data["project"]);
         }
     };
 
@@ -411,7 +412,7 @@ class App extends React.Component {
     handleResetProject = async () => {
         this.setState({ showProjectResetModal: false });
         const response = await resetProject(
-            this.state.project,
+            this.props.project,
             this.props.access
         );
         if (response.status === 401) {
@@ -423,9 +424,9 @@ class App extends React.Component {
                 editorFilenameInput: response.data.filename,
                 editorFiles: response.files,
                 editorSceneInput: response.data.scene,
-                project: response.data.project,
                 videoScene: response.data.scene
             });
+            this.props.onNewProject(response.data.project);
         }
     };
 
@@ -499,7 +500,7 @@ class App extends React.Component {
         this.props.onLogOut();
         this.restoreSession("");
         this.setState({
-            videoScene: consts.DEFAULT_SELECTED_SCENE,
+            videoScene: "",
             videoReturncode: -1,
             videoError: consts.DEFAULT_LOGS,
             editorSaveMessage: ""
@@ -577,7 +578,7 @@ class App extends React.Component {
         const response = await postRender(
             this.state.editorFilenameInput,
             this.state.editorSceneInput,
-            this.state.project,
+            this.props.project,
             this.props.access
         );
         if (
@@ -598,7 +599,7 @@ class App extends React.Component {
         // TODO: implement save-on-signup
         const response = await saveProject(
             this.state.editorFilename,
-            this.state.project,
+            this.props.project,
             this.state.editorSceneInput,
             this.state.editorCode,
             this.props.access
@@ -653,7 +654,7 @@ class App extends React.Component {
                     <NotVideo
                         error={this.state.videoError}
                         filename={this.state.videoFile}
-                        project={this.state.project}
+                        project={this.props.project}
                         returncode={this.state.videoReturncode}
                         scene={this.state.videoScene}
                         username={this.props.username}

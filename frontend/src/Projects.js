@@ -19,6 +19,7 @@ import SearchIcon from '@material-ui/icons/Search';
 import { fade } from '@material-ui/core/styles/colorManipulator';
 import axios from 'axios';
 import * as consts from './constants.js';
+import { Redirect } from 'react-router-dom';
 
 
 const drawerWidth = 260;
@@ -141,10 +142,13 @@ class Projects extends React.Component {
         sharedProjects: true,
         projects: [],
         searchInput: '',
+        redirectToLab: false,
     }
 
-    chooseProject = (name) => {
-        alert('chose ' + name);
+    chooseProject = (project) => {
+        console.log('choosing...');
+        this.props.onNewProject(project);
+        this.setState({redirectToLab: true});
     }
 
     handleDrawerToggle = () => {
@@ -179,6 +183,9 @@ class Projects extends React.Component {
     render() {
         const { classes } = this.props;
         const { drawerOpen, sharedProjects, projects, searchInput } = this.state;
+        if (this.state.redirectToLab) {
+            return <Redirect to={{pathname: "/"}} />;
+        }
         return (
             <div className={classes.root}>
                 <AppBar
