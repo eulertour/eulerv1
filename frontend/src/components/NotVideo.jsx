@@ -30,7 +30,7 @@ class NotVideo extends Component {
         let video_content;
         let delimiter;
         if (this.props.returncode !== 0 ||
-            this.props.scene === consts.DEFAULT_SELECTED_SCENE) {
+            this.props.scene === "") {
             delimiter = '\n';
             video_content = (
                 <div className="video-placeholder">

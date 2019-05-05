@@ -26,10 +26,10 @@ class Main extends React.Component {
             access: cookies.get('access') || '',
             refresh: cookies.get('refresh') || '',
             username: '',
+            project: '',
         }
         this.handleAuth = this.handleAuth.bind(this);
         this.handleLogOut = this.handleLogOut.bind(this);
-        this.handleSessionRestore = this.handleSessionRestore.bind(this);
     }
 
     handleAuth(jwtResponse) {
@@ -43,8 +43,13 @@ class Main extends React.Component {
         });
     }
 
-    handleSessionRestore(username) {
+    handleFetchUsername = (username)  => {
         this.setState({username: username});
+    }
+
+    handleNewProject = (project) => {
+        console.log(project);
+        this.setState({project: project});
     }
 
     handleLogOut() {
@@ -93,9 +98,11 @@ class Main extends React.Component {
                             access={this.state.access}
                             refresh={this.state.refresh}
                             username={this.state.username}
+                            project={this.state.project}
                             onLogOut={this.handleLogOut}
                             onAuth={this.handleAuth}
-                            onSessionRestore={this.handleSessionRestore}
+                            onFetchUsername={this.handleFetchUsername}
+                            onNewProject={this.handleNewProject}
                         />
                     }/>
                     <Route path="/projects" render={() =>
@@ -103,6 +110,7 @@ class Main extends React.Component {
                             <Projects
                                 access={this.state.access}
                                 refresh={this.state.refresh}
+                                onNewProject={this.handleNewProject}
                             />
                         </MuiThemeProvider>
                     }/>

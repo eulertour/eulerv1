@@ -31,11 +31,7 @@ LIBRARY_DIR = os.path.join(
     SHARED_MEDIA_DIR,
     'manim/',
 )
-OLD_PROJECTS_DIR = os.path.join(
-    MEDIA_ROOT,
-    LIBRARY_DIR,
-    'old_projects/',
-)
+SHARED_PROJECTS_PATH = os.path.join(MEDIA_ROOT, SHARED_MEDIA_DIR, PROJECT_DIR)
 
 DEFAULT_PROJECT = 'default'
 DEFAULT_PROJECT_FILENAME = 'example_scenes.py'
