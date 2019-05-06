@@ -128,7 +128,8 @@ class SignUp(generics.GenericAPIView):
             )
         new_user = user_serializer.save()
 
-        # create the project
+        # create the project (TODO: refactor from Session and remove from here
+        # when there is a landing page)
         project_serializer = ProjectSerializer(data={
             'name': settings.DEFAULT_PROJECT,
             'owner': new_user.pk,
@@ -162,7 +163,6 @@ class Session(generics.RetrieveAPIView):
     permission_classes = ()
 
     def post(self, request):
-        ## import ipdb; ipdb.set_trace(context=9)
         profile = None
         response_data = {}
         project_name = request.data.get("project", "")
@@ -193,15 +193,26 @@ class Session(generics.RetrieveAPIView):
             )
             response_scene = ""
         else:
+            profile = Profile.objects.get(user=request.user)
             if not project_name:
                 if profile.last_project:
                     project_name = profile.last_project.name
                 else:
                     project_name = settings.DEFAULT_PROJECT
 
+            # if the user doesn't have this project, create it here
+            if not Project.objects.filter(
+                owner=request.user,
+                name=project_name,
+            ).exists():
+                project_serializer = ProjectSerializer(data={
+                    'name': project_name,
+                    'owner': request.user.pk,
+                })
+                project_serializer.is_valid(raise_exception=True)
+                new_project = project_serializer.save(base_project=project_name)
+
             response_data = {'username': request.user.username}
-            profile = Profile.objects.get(user=request.user)
-            use_defaults = True
             # restore previous session
             # TODO: only allow path-friendly characters for everything
             project_source_path = os.path.join(
@@ -213,7 +224,7 @@ class Session(generics.RetrieveAPIView):
                 settings.SOURCE_DIR,
             )
 
-            # get a file from the project (TODO: refactor this)
+            # get a file from the project (TODO: refactor from anonymous case)
             project_files = os.listdir(project_source_path)
             project_files.sort(key=lambda x: (os.path.isdir(
                 os.path.join(project_source_path, x)), x))

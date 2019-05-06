@@ -124,14 +124,14 @@ class Module(models.Model):
     owner = models.ForeignKey(
         User,
         related_name='user_modules',
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         blank=True,
         null=True,
     )
     project = models.ForeignKey(
         Project,
         related_name='project_modules',
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         blank=True,
         null=True,
     )

@@ -157,7 +157,7 @@ class ProjectSerializer(serializers.ModelSerializer):
                 st = os.stat(path)
                 os.chmod(path, st.st_mode | stat.S_IWGRP)
 
-        # create modules
+        # create modules if created from a base project
         if 'base_project' in validated_data:
             base_project_dir = os.path.join(
                 settings.MEDIA_ROOT,
@@ -166,15 +166,37 @@ class ProjectSerializer(serializers.ModelSerializer):
                 validated_data['base_project'],
                 settings.SOURCE_DIR,
             )
-            for module in os.listdir(base_project_dir):
-                module_path = os.path.join(base_project_dir, module)
-                if not os.path.isfile(module_path):
-                    continue
-                with open(module_path, 'r') as f:
-                    Module.objects.create(
-                        owner=owner,
-                        project=project,
-                        source=ContentFile(f.read(), name=module),
-                        time=timezone.now(),
-                    )
+            user_project_dir = os.path.join(
+                settings.MEDIA_ROOT,
+                settings.USER_MEDIA_DIR,
+                owner.username,
+                settings.PROJECT_DIR,
+                validated_data['base_project'],
+                settings.SOURCE_DIR,
+            )
+            def copy_modules(source_dir):
+                for module in os.listdir(source_dir):
+                    module_path = os.path.join(source_dir, module)
+                    if os.path.isdir(module_path):
+                        relative_path = os.path.relpath(
+                                module_path, base_project_dir)
+                        user_project_path = os.path.join(
+                                user_project_dir, relative_path)
+                        os.mkdir(user_project_path)
+                        copy_modules(module_path)
+                    else:
+                        with open(module_path, 'r') as f:
+                            Module.objects.create(
+                                owner=owner,
+                                project=project,
+                                source=ContentFile(
+                                    f.read(),
+                                    name=os.path.relpath(
+                                        module_path,
+                                        base_project_dir,
+                                    ),
+                                ),
+                                time=timezone.now(),
+                            )
+            copy_modules(base_project_dir)
         return project
