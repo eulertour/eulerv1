@@ -13,8 +13,11 @@ class NotVideo extends Component {
     }
 
     getVideoURL(user, project, file, scene, access, version) {
+        let pathComponents = file.split('/');
+        let basename = pathComponents[pathComponents.length - 1];
+        let basenameRoot = basename.split('.')[0];
         return consts.MEDIA_URL + 'user/' + user + '/projects/' +
-            project + '/videos/' + file.split('.')[0] + '/480p15/' +
+            project + '/videos/' + basenameRoot + '/480p15/' +
             scene + '.mp4?jwt=' + access + '&v=' + version;
     }
 
