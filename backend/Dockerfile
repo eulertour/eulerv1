@@ -28,7 +28,11 @@ RUN python -m pip install ipdb pyOpenSSL Werkzeug django-extensions
 WORKDIR /opt/eulertour/backend
 CMD tail -f /dev/null
 # devserver
-# ./copy_certs.sh && python manage.py migrate && python manage.py runserver_plus --cert-file=/var/keys/fullchain.crt --key-file=/var/keys/privkey.key 0.0.0.0:8000
+# ./copy_certs.sh && \
+# python manage.py migrate && \
+# python manage.py runserver_plus \
+#     --cert-file=/var/keys/fullchain.crt \
+#     --key-file=/var/keys/privkey.key 0.0.0.0:8000
 
 # local
 # python manage.py migrate && python manage.py runserver_plus 0.0.0.0:8000

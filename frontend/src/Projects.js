@@ -22,6 +22,7 @@ import * as consts from './constants.js';
 
 
 const drawerWidth = 260;
+const appBarHeight = 70;
 const styles = theme => ({
   root: {
     display: 'flex',
@@ -36,7 +37,7 @@ const styles = theme => ({
       duration: theme.transitions.duration.leavingScreen,
     }),
     zIndex: theme.zIndex.drawer + 1,
-    minHeight: 70,
+    minHeight: appBarHeight,
     backgroundColor: theme.palette.common.white,
     boxShadow: "2px 6px 10px 0 rgba(115, 143, 147, .4)",
   },
@@ -57,20 +58,16 @@ const styles = theme => ({
   drawerPaper: {
     width: drawerWidth,
   },
-  drawerHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    ...theme.mixins.toolbar,
-    justifyContent: 'space-between',
-  },
   content: {
     flexGrow: 1,
-    padding: theme.spacing.unit * 3,
+    paddingLeft: theme.spacing.unit * 3,
+    paddingRight: theme.spacing.unit * 3,
     transition: theme.transitions.create('margin', {
       easing: theme.transitions.easing.sharp,
       duration: theme.transitions.duration.leavingScreen,
     }),
     marginLeft: 0,
+    marginTop: 20,
   },
   contentShift: {
     transition: theme.transitions.create('margin', {
@@ -117,10 +114,8 @@ const styles = theme => ({
     transition: theme.transitions.create('width'),
     width: '100%',
   },
-  toolbar: {
-      display: 'flex',
-      justifyContent: 'flex-start',
-      ...theme.mixins.toolbar,
+  appBarSpacer: {
+    height: appBarHeight,
   },
   colorBlack: {
     color: theme.palette.common.black,
@@ -130,9 +125,12 @@ const styles = theme => ({
     width: '100%',
     padding: 0,
   },
-  list: {
+  drawerList: {
     backgroundColor: theme.palette.background.paper,
-  }
+  },
+  contentListRoot: {
+      paddingTop: 0
+  },
 });
 
 class Projects extends React.Component {
@@ -185,10 +183,7 @@ class Projects extends React.Component {
                     position="fixed"
                     className={classes.appBar}
                 >
-                    <Toolbar
-                        className={classes.toolbar}
-                        disableGutters={true}
-                    >
+                    <Toolbar disableGutters={true}>
                         <div className="projects-logo-container">
                             <div className="logo-container">
                                 <IconButton
@@ -238,9 +233,12 @@ class Projects extends React.Component {
                         [classes.contentShift]: drawerOpen,
                     })}
                 >
-                    <div className={classes.drawerHeader} />
+                    <div className={classes.appBarSpacer} />
                     {sharedProjects ? "shared projects" : "your projects"}
-                    <List classes={{root: classes.list}}>
+                    <List
+                        className={classes.drawerList}
+                        classes={{root: classes.contentListRoot}}
+                    >
                       {projects.map(projectName => (
                         <ListItem
                           button
@@ -260,8 +258,8 @@ class Projects extends React.Component {
                         paper: classes.drawerPaper,
                     }}
                 >
-                    <div className={classes.toolbar} />
-                    <List>
+                    <div className={classes.appBarSpacer} />
+                    <List className={classes.drawerList}>
                       <ListItem
                         button
                         key={"yourprojects"}

@@ -10,9 +10,14 @@ import { MuiThemeProvider, createMuiTheme } from '@material-ui/core/styles';
 const theme = createMuiTheme({
     palette: {
         primary: {
-            main: "#b43daf",
-            light: "#c363bf",
-            dark: "#7d2a7a",
+            main: "#c474dd",
+            light: "#f8a5ff",
+            dark: "#9245ab",
+        },
+        secondary: {
+            main: "#79e7f3",
+            light: "#afffff",
+            dark: "#40b5c0",
         },
     },
     typography: { useNextVariants: true },
@@ -26,7 +31,7 @@ class Main extends React.Component {
             access: cookies.get('access') || '',
             refresh: cookies.get('refresh') || '',
             username: '',
-        }
+        };
         this.handleAuth = this.handleAuth.bind(this);
         this.handleLogOut = this.handleLogOut.bind(this);
         this.handleSessionRestore = this.handleSessionRestore.bind(this);
@@ -63,7 +68,15 @@ class Main extends React.Component {
             <CookiesProvider>
             <BrowserRouter>
                 <Switch>
-                    <Route path="/home" render={() => <Home />}/>
+                    <Route path="/home" render={() =>
+                        <Home
+                            access={this.state.access}
+                            refresh={this.state.refresh}
+                            username={this.state.username}
+                            onLogOut={this.handleLogOut}
+                            onAuth={this.handleAuth}
+                        />
+                    }/>
                     <Route path="/login" render={() =>
                         <LoginPage
                             access={this.state.access}
