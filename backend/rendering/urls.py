@@ -8,6 +8,7 @@ urlpatterns = [
     path('login/', views.LogIn.as_view()),
     path('signup/', views.SignUp.as_view()),
     path('session/', views.Session.as_view()),
+    path('username/', views.GetUsername.as_view()),
     path('video/', views.VideoAuth.as_view()),
 
     path('render/', views.Render.as_view()),

@@ -349,7 +349,6 @@ export function postRender(
 }
 
 export function fetchRestoreSession(access, editorFilename, project, logout) {
-    console.log("filename: " + editorFilename);
     return axios
         .post(
             consts.SESSION_URL,
@@ -400,5 +399,23 @@ export function fetchRestoreSession(access, editorFilename, project, logout) {
                 }
             }
             console.log(error.response);
+        });
+}
+
+export function fetchUsernameFromToken(accessToken) {
+    return axios
+        .post(
+            consts.USERNAME_URL,
+            {
+                access: accessToken,
+            },
+            { headers: getHeadersDict(accessToken) }
+        )
+        .then(response => {
+            return { ...response };
+        })
+        .catch(error => {
+            console.log(error);
+            console.log(error.data);
         });
 }

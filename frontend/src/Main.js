@@ -34,7 +34,7 @@ class Main extends React.Component {
         };
         this.handleAuth = this.handleAuth.bind(this);
         this.handleLogOut = this.handleLogOut.bind(this);
-        this.handleSessionRestore = this.handleSessionRestore.bind(this);
+        this.handleUsernameReceived = this.handleUsernameReceived.bind(this);
     }
 
     handleAuth(jwtResponse) {
@@ -48,7 +48,7 @@ class Main extends React.Component {
         });
     }
 
-    handleSessionRestore(username) {
+    handleUsernameReceived(username) {
         this.setState({username: username});
     }
 
@@ -75,6 +75,7 @@ class Main extends React.Component {
                             username={this.state.username}
                             onLogOut={this.handleLogOut}
                             onAuth={this.handleAuth}
+                            onUsernameReceived={this.handleUsernameReceived}
                         />
                     }/>
                     <Route path="/login" render={() =>
@@ -108,7 +109,7 @@ class Main extends React.Component {
                             username={this.state.username}
                             onLogOut={this.handleLogOut}
                             onAuth={this.handleAuth}
-                            onSessionRestore={this.handleSessionRestore}
+                            onUsernameReceived={this.handleUsernameReceived}
                         />
                     }/>
                     <Route path="/projects" render={() =>
