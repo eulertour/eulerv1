@@ -11,6 +11,7 @@ export const API_URL = (process.env.REACT_APP_API_URL === undefined ?
 export const LOGIN_URL          = API_URL + 'login/';
 export const SIGNUP_URL         = API_URL + 'signup/';
 export const SESSION_URL        = API_URL + 'session/';
+export const USERNAME_URL       = API_URL + 'username/';
 
 export const RENDER_URL         = API_URL + 'render/';
 

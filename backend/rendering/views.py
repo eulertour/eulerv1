@@ -232,6 +232,12 @@ class Session(generics.RetrieveAPIView):
             })
         return Response(response_data)
 
+class GetUsername(generics.GenericAPIView):
+    authentication_classes = (JWTAuthentication,)
+    permission_classes = ()
+
+    def post(self, request):
+        return Response({'username': request.user.username})
 
 class VideoAuth(generics.GenericAPIView):
     authentication_classes = (JWTAuthentication,)

@@ -369,8 +369,6 @@ class App extends React.Component {
     };
 
     restoreSession = async accessToken => {
-        console.log(this.state.project);
-        console.log(this.state.editorFilename);
         const response = await fetchRestoreSession(
             accessToken,
             this.state.editorFilename,
@@ -390,7 +388,7 @@ class App extends React.Component {
                 videoScene: response.data.scene || this.state.videoScene
             });
         if ("username" in response.data) {
-            this.props.onSessionRestore(response.data["username"]);
+            this.props.onUsernameReceived(response.data["username"]);
         }
     };
 

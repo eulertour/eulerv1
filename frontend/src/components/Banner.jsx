@@ -19,13 +19,17 @@ import Konva from 'konva';
 
 import * as colors from '@material-ui/core/colors';
 
-const canvasHeight = 500;
+const canvasHeight = 520;
 const logoHeight = 0.5 * canvasHeight;
 const driftRate = 0.007;
 const videoPlaybackRate = 0.4;
 const styles = theme => ({
     canvasSpacer: {
         height: canvasHeight,
+    },
+    canvasContainer: {
+        width: "100%",
+        position: 'relative',
     },
     canvas: {
         position: "absolute",
@@ -60,6 +64,7 @@ class Banner extends React.Component {
         this.square = React.createRef();
         this.layer = React.createRef();
         this.video = React.createRef();
+        this.stage = React.createRef();
         this.state = {
             x: 0,
             y: 0,
@@ -84,11 +89,11 @@ class Banner extends React.Component {
             this.layer.current.add(img);
 
             let anim = new Konva.Animation((frame) => {
-              let timeDiff = frame.timeDiff;
+                // let timeDiff = frame.timeDiff;
                 if (img.y() > canvasHeight) {
                     img.position({x: img.x(), y: -img.height()});
                 } else {
-                    img.move({y: timeDiff * driftRate});
+                    img.move({y: 20 * driftRate});
                 }
             }, this.layer.current);
             anim.start();
@@ -100,14 +105,14 @@ class Banner extends React.Component {
         video.playbackRate = videoPlaybackRate;
         this.placeImage(circle  , 0.07, 0.05, 0.9, colors.pink[500]);
         this.placeImage(sum     , 0.25, 0.23, 1.8, colors.orange[500]);
-        this.placeImage(pi      , 0.63, 0.3 , 0.9, colors.purple[500]);
+        this.placeImage(pi      , 0.67, 0.3 , 0.9, colors.purple[500]);
         this.placeImage(integers, 0.13, 0.40, 0.6, colors.green[500]);
         this.placeImage(euler   , 0.65, 0.78, 1.6, colors.green[500]);
 
         this.placeImage(phi     , 0.84, 0.21, 1.2, colors.red[500]);
         this.placeImage(square  , 0.71, 1   , 0.8, colors.indigo[500]);
         this.placeImage(infinity, 0.04, 0.8 , 1.2, colors.cyan[500]);
-        this.placeImage(triangle, 0.27, 0.88, 1.5, colors.blue[500]);
+        this.placeImage(triangle, 0.24, 0.88, 1.5, colors.blue[500]);
         this.placeImage(integral, 0.90, 0.43, 0.8, colors.lightBlue[500]);
     }
 
@@ -116,10 +121,13 @@ class Banner extends React.Component {
         return (
             <React.Fragment>
                 <div className={classes.canvasContainer}>
+                    {/* the width of the scrollbar must be subtracted from the
+                        width to prevent horizontal scrolling */}
                     <Stage
-                        width={window.innerWidth}
+                        ref={this.stage}
+                        width={window.innerWidth - 12}
                         height={canvasHeight}
-                        style={{position: 'absolute'}} 
+                        style={{position: 'absolute', overflow: 'hidden'}} 
                     >
                         <Layer ref={this.layer} />
                     </Stage>
