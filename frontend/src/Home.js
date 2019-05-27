@@ -88,7 +88,7 @@ const styles = theme => ({
     flexDirection: "column",
     justifyContent: "space-around",
     width: "100%",
-    marginTop: "10px",
+    marginTop: "5px",
     marginBottom: "20px",
     backgroundColor: theme.palette.grey[50],
   },
@@ -106,6 +106,40 @@ const styles = theme => ({
     alignItems: "center",
     height: "85px",
   },
+  getStartedButton: {
+      borderRadius: "15px",
+      width: "200px",
+      height: "60px",
+      display: "flex",
+      fontSize: "1.3rem",
+      border: "1px solid #dcdcdc",
+      justifyContent: "center",
+      alignItems: "center",
+      boxSizing: "border-box",
+      cursor: "pointer",
+      transition: "background-color 0.3s ease-in-out",
+  },
+  emphaticButton: {
+      backgroundColor: "#b43daf",
+      color: "white",
+      border: "none",
+      '&:hover': {
+          backgroundColor: "#8c3087",
+      }
+  },
+  getStartedBlock: {
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      marginTop: "20px",
+  },
+  getStarted: {
+
+  },
+  communityLink: {
+      height: "100%",
+      boxSizing: "border-box",
+  }
 });
 
 class Home extends React.Component {
@@ -130,7 +164,9 @@ class Home extends React.Component {
     }
 
     componentWillUnmount = () => {
-        document.removeEventListener('scroll', this.trackScrolling);
+        // causes "Warning: Can't perform a React state update on an unmounted
+        // component." after navigating away.
+        // document.removeEventListener('scroll', this.trackScrolling);
     }
 
     trackScrolling = () => {
@@ -140,11 +176,11 @@ class Home extends React.Component {
               strings: [`
 <code>
 <span style="margin-left: 0px" >
-  <span style="color: #708">class</span> 
+  <span style="color: #708">class</span>
   <span style="color: #00f">SquareToCircle</span>(Scene):
 </span><br>
 <span style="margin-left: 34px">
-  <span style="color: #708">def</span> 
+  <span style="color: #708">def</span>
   <span style="color: #00f">construct</span>(self):
 </span><br>
 <span style="margin-left: 68px">circle = Circle()<br>
@@ -187,7 +223,7 @@ class Home extends React.Component {
                         disableGutters={true}
                     >
                         <div className="projects-logo-container">
-                            <NavLink to="/home">
+                            <NavLink to="/">
                                 <div className="logo-container">
                                     <img
                                         className="banner-logo"
@@ -204,7 +240,7 @@ class Home extends React.Component {
                         <LoginInfo
                             username={this.props.username}
                             logOut={() => {this.props.onLogOut()}}
-                            from={"/home"}
+                            from={"/"}
                         />
                     </Toolbar>
                 </AppBar>
@@ -233,19 +269,64 @@ class Home extends React.Component {
                                         height={"100%"}
                                         type="video/mp4"
                                     /> :
-                                    <img src={playButton} height={50} />
+                                    <img
+                                        src={playButton}
+                                        height={50}
+                                        alt={"play button"}
+                                    />
                                 }
                             </div>
                         </div>
+                    </div>
+                    <div className={classes.getStartedBlock}>
+                        <NavLink to="/create">
+                            <div
+                                className={classNames(
+                                classes.getStartedButton,
+                                classes.emphaticButton)}
+                            >
+                                Start using Manim
+                            </div>
+                        </NavLink>
                     </div>
                     <div className={classes.communityBlock}>
                         <div className={classes.communityMessage}>
                             Join the community
                         </div>
                         <div className={classes.links}>
-                            <img src={github} alt="github logo" height={"100%"}/>
-                            <img src={reddit} alt="reddit logo" height={"100%"}/>
-                            <img src={discord} alt="discord logo" height={"100%"}/>
+                            <a
+                                href="https://github.com/3b1b/manim"
+                                target="_tab"
+                                className={classes.communityLink}
+                            >
+                                <img
+                                    src={github}
+                                    alt="github logo"
+                                    height={"100%"}
+                                />
+                            </a>
+                            <a
+                                href="https://www.reddit.com/r/manim"
+                                target="_tab"
+                                className={classes.communityLink}
+                            >
+                                <img
+                                    src={reddit}
+                                    alt="reddit logo"
+                                    height={"100%"}
+                                />
+                            </a>
+                            <a
+                                href="https://discord.gg/mMRrZQW"
+                                target="_tab"
+                                className={classes.communityLink}
+                            >
+                                <img
+                                    src={discord}
+                                    alt="discord logo"
+                                    height={"100%"}
+                                />
+                            </a>
                         </div>
                     </div>
                 </div>

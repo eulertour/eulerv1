@@ -68,7 +68,7 @@ class Main extends React.Component {
             <CookiesProvider>
             <BrowserRouter>
                 <Switch>
-                    <Route path="/home" render={() =>
+                    <Route exact path="/" render={() =>
                         <Home
                             access={this.state.access}
                             refresh={this.state.refresh}
@@ -102,7 +102,7 @@ class Main extends React.Component {
                             }}
                         />
                     }/>
-                    <Route exact path="/" render={() =>
+                    <Route path="/create" render={() =>
                         <App
                             access={this.state.access}
                             refresh={this.state.refresh}
@@ -112,7 +112,7 @@ class Main extends React.Component {
                             onUsernameReceived={this.handleUsernameReceived}
                         />
                     }/>
-                    <Route path="/projects" render={() =>
+                    <Route path="/browse" render={() =>
                         <MuiThemeProvider theme={theme}>
                             <Projects
                                 access={this.state.access}

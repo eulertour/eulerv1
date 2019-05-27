@@ -629,7 +629,7 @@ class App extends React.Component {
         return (
             <div className="page-container">
                 <div className="header">
-                    <NavLink to="/home">
+                    <NavLink to="/">
                         <div className="logo-container">
                             <img
                                 className="banner-logo"
@@ -645,6 +645,7 @@ class App extends React.Component {
                     <LoginInfo
                         username={this.props.username}
                         logOut={this.logOut}
+                        from={"/create"}
                     />
                 </div>
                 <div className="app-container">

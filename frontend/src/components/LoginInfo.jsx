@@ -24,6 +24,9 @@ export const LoginInfo = withStyles((theme) => ({
         backgroundColor: "#b43daf",
         color: "white",
         border: "none",
+        '&:hover': {
+            backgroundColor: "#8c3087",
+        }
     },
     filesButton: {
         display: "none",
@@ -54,7 +57,7 @@ export const LoginInfo = withStyles((theme) => ({
     loginButton: {
         color: "#0e0e0e",
         marginRight: "0",
-        '&hover': {
+        '&:hover': {
             backgroundColor: "#e5e5e5",
         }
     },
