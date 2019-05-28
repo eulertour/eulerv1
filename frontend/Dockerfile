@@ -8,7 +8,7 @@ ENV GENERATE_SOURCEMAP false
 RUN npm run build
 
 FROM linuxserver/letsencrypt as prod
-COPY --from=build /opt/build /var/www/etr-frontend/build
+COPY --from=build /opt/build /config/www
 
 # expect eulertour/frontend to be bind mounted to /opt/eulertour/frontend
 # test by going to dev.eulertour.com:3000 (no www.)
