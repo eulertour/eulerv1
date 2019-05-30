@@ -134,12 +134,15 @@ class Banner extends React.Component {
                     <div className={classes.canvasContent}>
                         <video
                             className={classes.hypercube}
-                            src={hypercube}
                             loop
                             autoPlay
-                            type="video/mp4"
                             ref={this.video}
-                        />
+                        >
+                            <source
+                                src={hypercube}
+                                type="video/mp4"
+                            />
+                        </video>
                         <div className={classes.bannerText}>
                             An online editor for Manim
                         </div>
