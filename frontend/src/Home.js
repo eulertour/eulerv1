@@ -52,6 +52,7 @@ const styles = theme => ({
     display: "flex",
     flexDirection: "column",
     justifyContent: "space-around",
+    alignItems: "center",
     width: "100%",
     backgroundColor: theme.palette.grey[50],
   },
@@ -68,6 +69,7 @@ const styles = theme => ({
     flexDirection: "row",
     justifyContent: "space-around",
     height: 210,
+    width: "80%",
   },
   typeExample: {
     height: "100%",
@@ -91,6 +93,7 @@ const styles = theme => ({
     marginTop: "5px",
     marginBottom: "20px",
     backgroundColor: theme.palette.grey[50],
+    alignItems: "center",
   },
   communityMessage: {
     textAlign: "center",
@@ -105,6 +108,7 @@ const styles = theme => ({
     justifyContent: "space-around",
     alignItems: "center",
     height: "85px",
+    width: "65%",
   },
   getStartedButton: {
       borderRadius: "15px",
@@ -199,7 +203,7 @@ class Home extends React.Component {
 </span>
 </code>
               `],
-               typeSpeed: 20,
+               typeSpeed: 10,
                onComplete: () => {this.setState({finishedTyping: true})}
             }
 
@@ -264,11 +268,14 @@ class Home extends React.Component {
                                 {this.state.finishedTyping ? 
                                     <video
                                         ref={this.video}
-                                        src={squareToCircle}
                                         autoPlay
                                         height={"100%"}
-                                        type="video/mp4"
-                                    /> :
+                                    >
+                                        <source
+                                            src={squareToCircle}
+                                            type="video/mp4"
+                                        />
+                                    </video> :
                                     <img
                                         src={playButton}
                                         height={50}
