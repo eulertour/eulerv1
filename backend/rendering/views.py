@@ -263,6 +263,7 @@ class Render(generics.GenericAPIView):
     def post(self, request):
         input_filename = request.data["filename"]
         input_scene = request.data["scene"]
+        input_resolution = request.data["resolution"]
         if input_scene is None:
             return Response({'info': 'no scene specified'})
 
@@ -283,8 +284,10 @@ class Render(generics.GenericAPIView):
             'manimjob.render_scene',
             input_filename,
             input_scene,
+            input_resolution,
             manim_path,
             project_path,
+            job_timeout=210,
         )
 
         response_data = request.data
@@ -305,8 +308,9 @@ class CheckRenderJob(generics.GenericAPIView):
                 'result': job.result,
             }
             if job.status == 'finished':
-                response_data['scene'] = job.args[1]
                 response_data['filename'] = job.args[0]
+                response_data['scene'] = job.args[1]
+                response_data['resolution'] = job.args[2]
             return Response(response_data)
         else:
             return Response({'status': 'unknown scene'})

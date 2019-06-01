@@ -1,12 +1,23 @@
 #!/usr/bin/python3.7
 
+import collections
 import os
 import shlex
 import subprocess
 
+RESOLUTION_DICT = collections.defaultdict(
+    lambda: "--low_quality", {
+        "1440p": "",
+        "1080p": "--high_quality",
+        "720p": "--medium_quality",
+        "480p": "--low_quality",
+    }
+)
+
 def render_scene(
         input_filename,
         input_scene,
+        input_resolution,
         manim_path,
         project_path,
     ):
@@ -19,19 +30,17 @@ def render_scene(
     args = [
             "docker", "run",
             "--rm",
-            "--cpuset-cpus", "0",
-            "--memory", "500m",
-            "--stop-timeout", "60",
             "--network", "none",
-            "-v", f"{manim_path}:/root/manim:ro",
             "-v", f"{project_path}:/root/project",
             "-e", "MEDIA_DIR=/root/project",
             "-e", "FILE_DIR=/root/project",
-            "-e", "PYTHONPATH=/root/manim",
-            "eulertour/manim:latest",
-            "-c", "umask 002 && cd /root/project/source && python -m manim " +
-                  f"{shlex.quote(input_filename)} " +
-                  f"{shlex.quote(input_scene)} -l",
+            "manim",
+            "-c",
+            "umask 002 && " +
+            "cd /root/project/source && " +
+            "manim " + f"{shlex.quote(input_filename)} " +
+                       f"{shlex.quote(input_scene)} " +
+                       RESOLUTION_DICT[input_resolution],
     ]
     # print(" ".join(args))
     # import sys

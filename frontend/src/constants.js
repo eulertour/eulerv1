@@ -29,3 +29,9 @@ export const NO_CHILDREN = [{name: '(empty)', empty: true, readOnly: true}];
 export const CHILDREN_NOT_LOADED = [{name: '(loading...)', empty: true, readOnly: true}];
 export const UNNAMED_FILE_ID = 'unnamed';
 export const MENU_ID = 'menuId';
+export const RESOLUTION_DICT = {
+    "1440p": "/1440p60/",
+    "1080p": "/1080p60/",
+    "720p": "/720p30/",
+    "480p": "/480p15/",
+}
