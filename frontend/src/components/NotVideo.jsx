@@ -12,10 +12,11 @@ class NotVideo extends Component {
         reload: false,
     }
 
-    getVideoURL(user, project, file, scene, access, version) {
-        return consts.MEDIA_URL + 'user/' + user + '/projects/' +
-            project + '/videos/' + file.split('.')[0] + '/480p15/' +
-            scene + '.mp4?jwt=' + access + '&v=' + version;
+    getVideoURL(user, project, file, scene, resolution, access, version) {
+        return consts.MEDIA_URL + 'user/' + user + '/projects/' + project +
+            '/videos/' + file.split('.')[0] +
+            consts.RESOLUTION_DICT[resolution] + scene + '.mp4?jwt=' + access +
+            '&v=' + version;
     }
 
     componentWillReceiveProps(props) {
@@ -48,6 +49,7 @@ class NotVideo extends Component {
                 this.props.project,
                 this.props.filename,
                 this.props.scene,
+                this.props.resolution,
                 this.props.access,
                 this.state.version,
             )

@@ -10,7 +10,7 @@ import { MuiThemeProvider, createMuiTheme } from '@material-ui/core/styles';
 const theme = createMuiTheme({
     palette: {
         primary: {
-            main: "#c474dd",
+            main: "#b43daf",
             light: "#f8a5ff",
             dark: "#9245ab",
         },
@@ -65,6 +65,7 @@ class Main extends React.Component {
 
     render() {
         return (
+            <MuiThemeProvider theme={theme}>
             <CookiesProvider>
             <BrowserRouter>
                 <Switch>
@@ -113,16 +114,15 @@ class Main extends React.Component {
                         />
                     }/>
                     <Route path="/browse" render={() =>
-                        <MuiThemeProvider theme={theme}>
-                            <Projects
-                                access={this.state.access}
-                                refresh={this.state.refresh}
-                            />
-                        </MuiThemeProvider>
+                        <Projects
+                            access={this.state.access}
+                            refresh={this.state.refresh}
+                        />
                     }/>
                 </Switch>
             </BrowserRouter>
             </CookiesProvider>
+            </MuiThemeProvider>
         );
     }
 }

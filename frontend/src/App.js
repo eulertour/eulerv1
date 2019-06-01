@@ -43,6 +43,7 @@ class App extends React.Component {
             editorSaveMessage: "",
             editorSceneInput: "",
             editorRenderStatus: "",
+            editorResolution: "480p",
 
             treeExpandedKeys: [],
 
@@ -51,6 +52,7 @@ class App extends React.Component {
             videoReturncode: -1,
             videoScene: "",
             videoReload: false,
+            videoResolution: "480p",
 
             autosaveTimer: -1,
             project: "",
@@ -512,8 +514,9 @@ class App extends React.Component {
                 renderTimer: -1,
                 videoError: responseData.result["stderr"],
                 videoReturncode: 0,
-                videoScene: responseData["scene"],
                 videoFile: responseData["filename"],
+                videoScene: responseData["scene"],
+                videoResolution: responseData["resolution"],
                 videoReload: !this.state.videoReload
             });
         } else {
@@ -559,6 +562,11 @@ class App extends React.Component {
                 }
                 if (renderStatus === "finished") {
                     this.handleRenderFinished(response.data);
+                } else if (renderStatus === "failed") {
+                    this.setState({
+                        editorRenderStatus: renderStatus,
+                        renderTimer: null,
+                    });
                 } else {
                     this.setState({
                         editorRenderStatus: renderStatus,
@@ -575,6 +583,7 @@ class App extends React.Component {
         const response = await postRender(
             this.state.editorFilenameInput,
             this.state.editorSceneInput,
+            this.state.editorResolution,
             this.state.project,
             this.props.access
         );
@@ -625,6 +634,10 @@ class App extends React.Component {
         }
     };
 
+    handleResolutionChange = (event) => {
+        this.setState({editorResolution: event.target.value});
+    }
+
     render() {
         return (
             <div className="page-container">
@@ -652,6 +665,7 @@ class App extends React.Component {
                     <NotVideo
                         error={this.state.videoError}
                         filename={this.state.videoFile}
+                        resolution={this.state.videoResolution}
                         project={this.state.project}
                         returncode={this.state.videoReturncode}
                         scene={this.state.videoScene}
@@ -673,6 +687,7 @@ class App extends React.Component {
                             this.props.access.length === 0
                         }
                         renderStatus={this.state.editorRenderStatus}
+                        resolution={this.state.editorResolution}
                         saveMessage={this.state.editorSaveMessage}
                         sceneInput={this.state.editorSceneInput}
                         expandedKeys={this.state.treeExpandedKeys}
@@ -688,6 +703,7 @@ class App extends React.Component {
                         onNewFileName={this.handleNewFileName}
                         onRender={this.handleRender}
                         onRenderCanceled={this.handleRenderCanceled}
+                        onResolutionChange={this.handleResolutionChange}
                         onSave={this.handleSave}
                         onSceneChange={this.handleSceneChange}
                         onSetAutosaveTimeout={this.handleSetAutosaveTimeout}

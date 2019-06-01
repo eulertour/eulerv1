@@ -325,6 +325,7 @@ export function getDirectoryContents(node, access, editorFiles) {
 export function postRender(
     editorFilenameInput,
     editorSceneInput,
+    editorResolution,
     project,
     access
 ) {
@@ -334,6 +335,7 @@ export function postRender(
             {
                 filename: editorFilenameInput,
                 scene: editorSceneInput,
+                resolution: editorResolution,
                 project: project
             },
             { headers: getHeadersDict(access) }
