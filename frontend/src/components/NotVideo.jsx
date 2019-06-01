@@ -1,10 +1,11 @@
 import React, { Component } from 'react';
-import { Player } from 'video-react';
+import { Player, ControlBar } from 'video-react';
 import "../../node_modules/video-react/dist/video-react.css";
 import * as consts from '../constants.js';
 import playButton from '../assets/button-circle-play@3x.svg';
 import 'react-perfect-scrollbar/dist/css/styles.css';
-import PerfectScrollbar from 'react-perfect-scrollbar'
+import PerfectScrollbar from 'react-perfect-scrollbar';
+import NotDownloadButton from './NotDownloadButton';
 
 class NotVideo extends Component {
     state = {
@@ -54,10 +55,16 @@ class NotVideo extends Component {
                 this.state.version,
             )
             video_content = (
-                <Player playsInline
-                        src={url}
-                        fluid={false}
-                        height={"100%"} />
+                <Player
+                    playsInline
+                    src={url}
+                    fluid={false}
+                    height={"100%"}
+                >
+                    <ControlBar autoHide={false}>
+                        <NotDownloadButton order={7}/>
+                    </ControlBar>
+                </Player>
             );
         }
         let video = (
