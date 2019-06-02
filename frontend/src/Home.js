@@ -14,6 +14,7 @@ import squareToCircle from './assets/SquareToCircle.mp4';
 import reddit from './assets/logos/reddit.svg';
 import github from './assets/logos/github.svg';
 import discord from './assets/logos/discord.svg';
+import patreon from './assets/logos/patreon.png';
 import { NavLink } from "react-router-dom";
 import { fetchUsernameFromToken } from "./api";
 
@@ -56,13 +57,13 @@ const styles = theme => ({
     width: "100%",
     backgroundColor: theme.palette.grey[50],
   },
-  codingMessage: {
+  blockLabel: {
     textAlign: "center",
     fontWeight: "bold",
     fontSize: "2.5rem",
     fontFamily: "sans-serif",
     letterSpacing: -1,
-    margin: "25px 0 10px 0",
+    margin: "60px 0 10px 0",
   },
   typingBoxes: {
     display: "flex",
@@ -90,18 +91,8 @@ const styles = theme => ({
     flexDirection: "column",
     justifyContent: "space-around",
     width: "100%",
-    marginTop: "5px",
-    marginBottom: "20px",
     backgroundColor: theme.palette.grey[50],
     alignItems: "center",
-  },
-  communityMessage: {
-    textAlign: "center",
-    fontWeight: "bold",
-    fontSize: "2.5rem",
-    fontFamily: "sans-serif",
-    letterSpacing: -1,
-    margin: "25px 0 10px 0",
   },
   links: {
     display: "flex",
@@ -131,7 +122,7 @@ const styles = theme => ({
           backgroundColor: "#8c3087",
       }
   },
-  getStartedBlock: {
+  getStartedContainer: {
       display: "flex",
       justifyContent: "center",
       alignItems: "center",
@@ -143,7 +134,16 @@ const styles = theme => ({
   communityLink: {
       height: "100%",
       boxSizing: "border-box",
-  }
+  },
+  supportBlock: {
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "center",
+      alignItems: "center",
+  },
+  spacer: {
+      height: "20px",
+  },
 });
 
 class Home extends React.Component {
@@ -174,7 +174,7 @@ class Home extends React.Component {
     }
 
     trackScrolling = () => {
-        if (window.innerHeight -
+        if (this.typingBlock.current && window.innerHeight -
             this.typingBlock.current.getBoundingClientRect().top > 150) {
             let options = {
               strings: [`
@@ -255,7 +255,7 @@ class Home extends React.Component {
                         className={classes.typingBlock}
                         ref={this.typingBlock}
                     >
-                        <div className={classes.codingMessage}>
+                        <div className={classes.blockLabel}>
                             Easy to start
                         </div>
                         <div className={classes.typingBoxes}>
@@ -284,20 +284,20 @@ class Home extends React.Component {
                                 }
                             </div>
                         </div>
-                    </div>
-                    <div className={classes.getStartedBlock}>
-                        <NavLink to="/create">
-                            <div
-                                className={classNames(
-                                classes.getStartedButton,
-                                classes.emphaticButton)}
-                            >
-                                Start using Manim
-                            </div>
-                        </NavLink>
+                        <div className={classes.getStartedContainer}>
+                            <NavLink to="/create">
+                                <div
+                                    className={classNames(
+                                    classes.getStartedButton,
+                                    classes.emphaticButton)}
+                                >
+                                    Start using Manim
+                                </div>
+                            </NavLink>
+                        </div>
                     </div>
                     <div className={classes.communityBlock}>
-                        <div className={classes.communityMessage}>
+                        <div className={classes.blockLabel}>
                             Join the community
                         </div>
                         <div className={classes.links}>
@@ -336,6 +336,25 @@ class Home extends React.Component {
                             </a>
                         </div>
                     </div>
+                    <div className={classes.supportBlock}>
+                        <div className={classes.blockLabel}>
+                            Show your support
+                        </div>
+                        <div className={classes.links}>
+                            <a
+                                href="https://www.patreon.com/eulertour"
+                                target="_tab"
+                                className={classes.communityLink}
+                            >
+                                <img
+                                    src={patreon}
+                                    alt="patreon logo"
+                                    height={"100%"}
+                                />
+                            </a>
+                        </div>
+                    </div>
+                    <div className={classes.spacer}/>
                 </div>
             </div>
         );
