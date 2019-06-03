@@ -34,7 +34,7 @@ def render_scene(
             "-v", f"{project_path}:/root/project",
             "-e", "MEDIA_DIR=/root/project",
             "-e", "FILE_DIR=/root/project",
-            "manim",
+            "eulertour/manim:latest",
             "-c",
             "umask 002 && " +
             "cd /root/project/source && " +
