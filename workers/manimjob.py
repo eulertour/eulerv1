@@ -15,32 +15,36 @@ RESOLUTION_DICT = collections.defaultdict(
 )
 
 def render_scene(
-        input_filename,
-        input_scene,
+        server_source_path,
+        source_filepath,
+        scene,
+        server_video_path,
+        server_tex_path,
         input_resolution,
-        manim_path,
-        project_path,
     ):
     # render the video
     # TODO: factor this into a function
     # TODO: error checking is for squares
-    info = {"scene": input_scene}
+    info = {"scene": scene}
 
     # TODO: pass this in correctly
     args = [
             "docker", "run",
             "--rm",
             "--network", "none",
-            "-v", f"{project_path}:/root/project",
-            "-e", "MEDIA_DIR=/root/project",
-            "-e", "FILE_DIR=/root/project",
+            "-v", f"{server_source_path}:/root/source",
+            "-v", f"{server_video_path}:/root/video",
+            "-v", f"{server_tex_path}:/root/tex",
             "eulertour/manim:latest",
             "-c",
             "umask 002 && " +
-            "cd /root/project/source && " +
-            "manim " + f"{shlex.quote(input_filename)} " +
-                       f"{shlex.quote(input_scene)} " +
-                       RESOLUTION_DICT[input_resolution],
+            "cd /root/source && " +
+            "manim "
+                "--video_dir=/root/video "
+                "--tex_dir=/root/tex "
+                f"{shlex.quote(source_filepath)} "
+                f"{shlex.quote(scene)} " +
+                RESOLUTION_DICT[input_resolution],
     ]
     # print(" ".join(args))
     # import sys

@@ -136,13 +136,9 @@ class ProjectSerializer(serializers.ModelSerializer):
         ) + os.sep
         source_path = os.path.join(project_path, settings.SOURCE_DIR)
         video_path = os.path.join(project_path, settings.VIDEO_DIR)
-        files_path = os.path.join(project_path, settings.FILES_DIR)
-        designs_path = os.path.join(project_path, settings.DESIGNS_DIR)
         try:
             os.makedirs(source_path)
             os.makedirs(video_path)
-            os.makedirs(files_path)
-            os.makedirs(designs_path)
         except:
             pass
         else:
@@ -153,7 +149,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             # source should remain read-only to the renderer
 
             # g+w
-            for path in [project_path, video_path, files_path, designs_path]:
+            for path in [project_path, video_path]:
                 st = os.stat(path)
                 os.chmod(path, st.st_mode | stat.S_IWGRP)
 

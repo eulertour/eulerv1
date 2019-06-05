@@ -261,32 +261,41 @@ class Render(generics.GenericAPIView):
     permission_classes = (IsAuthenticated,)
 
     def post(self, request):
-        input_filename = request.data["filename"]
-        input_scene = request.data["scene"]
-        input_resolution = request.data["resolution"]
-        if input_scene is None:
-            return Response({'info': 'no scene specified'})
+        input_filepath = request.data['filename']
+        input_project = request.data['project']
+        input_scene = request.data['scene']
+        input_resolution = request.data['resolution']
+
+        try:
+            server_filepath = os.path.join(
+                os.environ['DJANGO_MEDIA_ROOT'],
+                get_valid_media_path(
+                    input_project,
+                    request.user.username,
+                    input_filepath,
+                ),
+            )
+        except Exception as e:
+            return Response({'info': 'invalid data'})
+        server_source_path = server_filepath[:-len(input_filepath)]
+        server_video_path = server_source_path[:-len(settings.SOURCE_DIR)] + \
+            settings.VIDEO_DIR
+        os.makedirs(
+            settings.MEDIA_ROOT +
+                server_video_path[len(os.environ['DJANGO_MEDIA_ROOT']):],
+            exist_ok=True,
+        )
 
         # enqueue the job
-        manim_path = os.path.join(
-            os.environ['DJANGO_MEDIA_ROOT'],
-            settings.LIBRARY_DIR,
-        )
-        project_path = os.path.join(
-            os.environ['DJANGO_MEDIA_ROOT'],
-            settings.USER_MEDIA_DIR,
-            request.user.username,
-            settings.PROJECT_DIR,
-            request.data['project'],
-        )
         q = Queue(connection=Redis(host=settings.REDIS_HOST))
         result = q.enqueue(
             'manimjob.render_scene',
-            input_filename,
+            server_source_path,
+            os.path.relpath(server_filepath, start=server_source_path),
             input_scene,
+            server_video_path,
+            server_source_path[:-len(settings.SOURCE_DIR)] + "tex/",
             input_resolution,
-            manim_path,
-            project_path,
             job_timeout=210,
         )
 
@@ -308,9 +317,9 @@ class CheckRenderJob(generics.GenericAPIView):
                 'result': job.result,
             }
             if job.status == 'finished':
-                response_data['filename'] = job.args[0]
-                response_data['scene'] = job.args[1]
-                response_data['resolution'] = job.args[2]
+                response_data['filename'] = job.args[1]
+                response_data['scene'] = job.args[2]
+                response_data['resolution'] = job.args[5]
             return Response(response_data)
         else:
             return Response({'status': 'unknown scene'})
