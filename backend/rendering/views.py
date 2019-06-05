@@ -279,7 +279,7 @@ class Render(generics.GenericAPIView):
             return Response({'info': 'invalid data'})
         server_source_path = server_filepath[:-len(input_filepath)]
         server_video_path = server_source_path[:-len(settings.SOURCE_DIR)] + \
-            settings.VIDEO_DIR
+            settings.VIDEO_DIR + os.path.split(input_filepath)[0]
         os.makedirs(
             settings.MEDIA_ROOT +
                 server_video_path[len(os.environ['DJANGO_MEDIA_ROOT']):],
