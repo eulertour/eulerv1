@@ -20,6 +20,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATIC_ROOT = os.path.join(BASE_DIR, 'static/')
 
 MEDIA_ROOT = '/srv/data/'
+
 SHARED_MEDIA_DIR = 'shared/'
 USER_MEDIA_DIR = 'user/'
 PROJECT_DIR = 'projects/'
@@ -27,10 +28,9 @@ SOURCE_DIR = 'source/'
 VIDEO_DIR = 'videos/'
 FILES_DIR = 'files/'
 DESIGNS_DIR = 'designs/'
-LIBRARY_DIR = os.path.join(
-    SHARED_MEDIA_DIR,
-    'manim/',
-)
+MANIM_DIR = 'manim/'
+
+MANIM_PATH = os.path.join(MEDIA_ROOT, SHARED_MEDIA_DIR, MANIM_DIR)
 SHARED_PROJECTS_PATH = os.path.join(MEDIA_ROOT, SHARED_MEDIA_DIR, PROJECT_DIR)
 
 DEFAULT_PROJECT = 'default'
@@ -77,7 +77,7 @@ if os.getenv('DJANGO_CONFIGURE_LOGGING', '1') == '1':
                 'formatter': 'django.server',
             },
             'console': {
-                'level': 'INFO',
+                'level': 'DEBUG',
                 'class': 'logging.StreamHandler',
                 'formatter': 'django.server',
             },
@@ -95,6 +95,11 @@ if os.getenv('DJANGO_CONFIGURE_LOGGING', '1') == '1':
                 'handlers': ['file'],
                 'level': 'INFO',
                 'propagate': False,
+            },
+            'werkzeug': {
+                'handlers': ['console'],
+                'level': 'DEBUG',
+                'propagate': True,
             },
         }
     }

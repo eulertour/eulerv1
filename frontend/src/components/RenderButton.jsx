@@ -30,5 +30,12 @@ export const RenderButton = ({ renderStatus, onRenderCanceled, onRender }) => {
                 Rendering...
             </div>
         );
+    } else if (renderStatus === "failed") {
+        return (
+            <div className="render-button" onClick={onRender}>
+                <img className="render-icon" src={renderIcon} alt="render" />
+                Failed!
+            </div>
+        );
     }
 };

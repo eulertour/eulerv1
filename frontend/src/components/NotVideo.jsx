@@ -1,10 +1,11 @@
 import React, { Component } from 'react';
-import { Player } from 'video-react';
+import { Player, ControlBar } from 'video-react';
 import "../../node_modules/video-react/dist/video-react.css";
 import * as consts from '../constants.js';
 import playButton from '../assets/button-circle-play@3x.svg';
 import 'react-perfect-scrollbar/dist/css/styles.css';
-import PerfectScrollbar from 'react-perfect-scrollbar'
+import PerfectScrollbar from 'react-perfect-scrollbar';
+import NotDownloadButton from './NotDownloadButton';
 
 class NotVideo extends Component {
     state = {
@@ -12,13 +13,12 @@ class NotVideo extends Component {
         reload: false,
     }
 
-    getVideoURL(user, project, file, scene, access, version) {
-        let pathComponents = file.split('/');
-        let basename = pathComponents[pathComponents.length - 1];
-        let basenameRoot = basename.split('.')[0];
-        return consts.MEDIA_URL + 'user/' + user + '/projects/' +
-            project + '/videos/' + basenameRoot + '/480p15/' +
-            scene + '.mp4?jwt=' + access + '&v=' + version;
+    getVideoURL(access, version, mediaPath) {
+        let url = consts.MEDIA_URL + mediaPath + '?v=' + version;
+        if (access.length > 0) {
+            url += '&jwt=' + access;
+        }
+        return url;
     }
 
     componentWillReceiveProps(props) {
@@ -47,18 +47,21 @@ class NotVideo extends Component {
         } else {
             delimiter = '\r';
             let url = this.getVideoURL(
-                this.props.username,
-                this.props.project,
-                this.props.filename,
-                this.props.scene,
                 this.props.access,
                 this.state.version,
+                this.props.mediaPath,
             )
             video_content = (
-                <Player playsInline
-                        src={url}
-                        fluid={false}
-                        height={"100%"} />
+                <Player
+                    playsInline
+                    src={url}
+                    fluid={false}
+                    height={"100%"}
+                >
+                    <ControlBar autoHide={false}>
+                        <NotDownloadButton order={7}/>
+                    </ControlBar>
+                </Player>
             );
         }
         let video = (

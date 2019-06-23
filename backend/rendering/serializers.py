@@ -12,6 +12,7 @@ from django.utils import timezone
 from rest_framework import serializers
 from .models import Module, Profile, Project
 from manimlab_api import settings
+from django.contrib.auth import get_user_model
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -116,33 +117,27 @@ class ProjectSerializer(serializers.ModelSerializer):
             'name',
             'owner',
             'project_modules',
+            'is_shared',
         )
 
     def create(self, validated_data, **kwargs):
         name = validated_data['name']
         owner = validated_data['owner']
+        base_project_pk = validated_data.get('base_project_pk', None)
+        is_shared = validated_data['is_shared']
         # create object
         project = Project.objects.create(
             owner=owner,
             name=name,
+            is_shared=is_shared,
         )
         # create directories
-        project_path = os.path.join(
-            settings.MEDIA_ROOT,
-            settings.USER_MEDIA_DIR,
-            owner.username,
-            settings.PROJECT_DIR,
-            name,
-        ) + os.sep
+        project_path = project.get_path() + os.sep
         source_path = os.path.join(project_path, settings.SOURCE_DIR)
         video_path = os.path.join(project_path, settings.VIDEO_DIR)
-        files_path = os.path.join(project_path, settings.FILES_DIR)
-        designs_path = os.path.join(project_path, settings.DESIGNS_DIR)
         try:
             os.makedirs(source_path)
             os.makedirs(video_path)
-            os.makedirs(files_path)
-            os.makedirs(designs_path)
         except:
             pass
         else:
@@ -153,35 +148,30 @@ class ProjectSerializer(serializers.ModelSerializer):
             # source should remain read-only to the renderer
 
             # g+w
-            for path in [project_path, video_path, files_path, designs_path]:
+            for path in [project_path, video_path]:
                 st = os.stat(path)
                 os.chmod(path, st.st_mode | stat.S_IWGRP)
 
         # create modules if created from a base project
-        if 'base_project' in validated_data:
-            base_project_dir = os.path.join(
-                settings.MEDIA_ROOT,
-                settings.SHARED_MEDIA_DIR,
-                settings.PROJECT_DIR,
-                validated_data['base_project'],
+        if base_project_pk:
+            base_project_source_path = os.path.join(
+                Project.objects.get(pk=base_project_pk).get_path(),
                 settings.SOURCE_DIR,
             )
-            user_project_dir = os.path.join(
-                settings.MEDIA_ROOT,
-                settings.USER_MEDIA_DIR,
-                owner.username,
-                settings.PROJECT_DIR,
-                validated_data['base_project'],
+            project_source_path = os.path.join(
+                project.get_path(),
                 settings.SOURCE_DIR,
             )
+            # TODO: why not copy the directory and create Modules afterward?
             def copy_modules(source_dir):
                 for module in os.listdir(source_dir):
+                    if '__pycache__' in module: continue
                     module_path = os.path.join(source_dir, module)
                     if os.path.isdir(module_path):
                         relative_path = os.path.relpath(
-                                module_path, base_project_dir)
+                                module_path, base_project_source_path)
                         user_project_path = os.path.join(
-                                user_project_dir, relative_path)
+                                project_source_path, relative_path)
                         os.mkdir(user_project_path)
                         copy_modules(module_path)
                     else:
@@ -193,10 +183,79 @@ class ProjectSerializer(serializers.ModelSerializer):
                                     f.read(),
                                     name=os.path.relpath(
                                         module_path,
-                                        base_project_dir,
+                                        base_project_source_path,
                                     ),
                                 ),
                                 time=timezone.now(),
                             )
-            copy_modules(base_project_dir)
+            copy_modules(base_project_source_path)
+        return project
+
+class ProjectFromDirectorySerializer(serializers.ModelSerializer):
+    User = get_user_model()
+    owner = serializers.CharField(max_length=150)
+    name = serializers.CharField(max_length=100)
+    shared = serializers.BooleanField(required=True)
+    directory = serializers.FilePathField(
+        settings.MEDIA_ROOT,
+        recursive=True,
+        allow_folders=True,
+        allow_files=False,
+    )
+
+    class Meta:
+        model = Project
+        fields = '__all__'
+
+    def create(self, validated_data):
+        owner = User.objects.get(username=validated_data['owner'])
+        project = Project.objects.create(
+            owner=owner,
+            name=validated_data['name'],
+            is_shared=validated_data['shared'],
+        )
+        project_source_path = os.path.join(
+            project.get_path(),
+            settings.SOURCE_DIR,
+        )
+        os.makedirs(project_source_path, mode=0o775, exist_ok=True)
+
+        import glob
+        for filepath in glob.iglob(
+            os.path.join(validated_data['directory'], '') + '**/*',
+            recursive=True,
+        ):
+            if os.path.realpath(filepath) == os.path.realpath(
+                validated_data['directory']
+            ):
+                continue
+            if os.path.realpath(filepath).startswith(
+                os.path.realpath(project_source_path)
+            ):
+                continue
+            if '__pycache__' in filepath:
+                continue
+            if os.path.isdir(filepath):
+                os.mkdir(os.path.join(
+                    project_source_path,
+                    os.path.relpath(
+                        filepath,
+                        validated_data['directory'],
+                    ),
+                ))
+            else:
+                with open(filepath) as module_filepath:
+                    m = Module.objects.create(
+                        owner=owner,
+                        project=project,
+                        source=ContentFile(
+                            module_filepath.read(),
+                            name=os.path.relpath(
+                                filepath,
+                                validated_data['directory'],
+                            )
+                        ),
+                        time=timezone.now(),
+                    )
+
         return project

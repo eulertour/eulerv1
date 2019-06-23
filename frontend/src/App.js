@@ -9,7 +9,7 @@ import * as consts from "./constants.js";
 import Editor from "./components/Editor.jsx";
 import logo from "./assets/etourlogo.jpg";
 import {
-    resetProject,
+    deleteProject,
     deleteFile,
     newFileName,
     saveProject,
@@ -22,8 +22,11 @@ import {
 import _ from "lodash";
 import * as utils from "./utils.js";
 import { LoginModal } from "./components/LoginModal";
-import { ResetModal } from "./components/ResetModal";
+import { DeleteModal } from "./components/DeleteModal";
 import { LoginInfo } from "./components/LoginInfo";
+import { Redirect } from 'react-router-dom';
+import SubdirectoryArrowRightIcon from '@material-ui/icons/SubdirectoryArrowRight';
+import IconButton from '@material-ui/core/IconButton';
 
 class App extends React.Component {
     static propTypes = {
@@ -43,6 +46,7 @@ class App extends React.Component {
             editorSaveMessage: "",
             editorSceneInput: "",
             editorRenderStatus: "",
+            editorResolution: "480p",
 
             treeExpandedKeys: [],
 
@@ -51,12 +55,15 @@ class App extends React.Component {
             videoReturncode: -1,
             videoScene: "",
             videoReload: false,
+            videoResolution: "480p",
+            videoMediaPath: "",
 
             autosaveTimer: -1,
             renderTimer: -1,
             showFileMoveModal: false,
             showLoginModal: false,
-            showProjectResetModal: false
+            showProjectDeleteModal: false,
+            redirectToHome: false,
         };
     }
 
@@ -64,8 +71,8 @@ class App extends React.Component {
         this.setState({ treeExpandedKeys: expandedKeys }, cb);
     };
 
-    handleProjectReset = () => {
-        this.setState({ showProjectResetModal: true });
+    handleProjectDelete = () => {
+        this.setState({ showProjectDeleteModal: true });
     };
 
     handleAnimationComplete = () => {
@@ -105,7 +112,9 @@ class App extends React.Component {
         e.stopPropagation();
 
         const response = await deleteFile(
-            this.props.project,
+            this.props.projectName,
+            this.props.projectOwner,
+            this.props.projectIsShared,
             this.props.access,
             data,
             this.state.editorFiles,
@@ -186,7 +195,7 @@ class App extends React.Component {
                 // TODO: this should maybe be a path list
                 // (if you want to REALLY enforce separation)
                 name: pathList.join("/"),
-                project: this.props.project,
+                project: this.props.projectName,
                 code: ""
             };
         } else {
@@ -196,7 +205,7 @@ class App extends React.Component {
                 // TODO: this should maybe be a path list
                 // (if you want to REALLY enforce separation)
                 name: pathList.join("/"),
-                project: this.props.project,
+                project: this.props.projectName,
                 // TODO: join the path from pathList
                 newName: newNamePathList.join("/")
             };
@@ -213,7 +222,7 @@ class App extends React.Component {
             siblingList,
             nodeCopy,
             filesCopy,
-            this.props.project,
+            this.props.projectName,
             this.changeSubtreeIds,
             this.state.treeExpandedKeys,
             this.state.editorFilename,
@@ -296,11 +305,7 @@ class App extends React.Component {
         } else {
             action = data.action;
         }
-        if (
-            !_.find(["new-file", "new-directory"], o => {
-                return o === action;
-            })
-        ) {
+        if (action !== "new-file" && action !== "new-directory") {
             console.log("unknown action");
             return;
         }
@@ -368,15 +373,17 @@ class App extends React.Component {
     };
 
     restoreSession = async accessToken => {
-        console.log(this.props.project);
-        console.log(this.state.editorFilename);
         const response = await fetchRestoreSession(
             accessToken,
             this.state.editorFilename,
-            this.props.project,
-            this.logOut
+            this.props.projectName,
+            this.props.projectOwner,
+            this.props.projectIsShared,
+            this.logOut,
         );
-        response &&
+        if (response.info && response.info === 'no project specified or session to restore') {
+            this.setState({redirectToProjects: true});
+        } else if (response) {
             this.setState({
                 editorCode: response.data.code || this.state.editorCode,
                 editorFilename:
@@ -387,11 +394,16 @@ class App extends React.Component {
                 editorSceneInput: response.data.scene || this.state.videoScene,
                 videoScene: response.data.scene || this.state.videoScene
             });
-        if ("username" in response.data) {
-            this.props.onFetchUsername(response.data["username"]);
-        }
-        if ("project" in response.data) {
-            this.props.onNewProject(response.data["project"]);
+            if ("username" in response.data) {
+                this.props.onUsernameReceived(response.data["username"]);
+            }
+            if ("project_name" in response.data) {
+                this.props.onNewProject(
+                    response.data["project_name"],
+                    response.data["project_owner"],
+                    response.data["project_is_shared"],
+                );
+            }
         }
     };
 
@@ -404,38 +416,33 @@ class App extends React.Component {
             this.setState({
                 showLoginModal: false,
                 showFileMoveModal: false,
-                showProjectResetModal: false
+                showProjectDeleteModal: false
             });
         }
     };
 
-    handleResetProject = async () => {
-        this.setState({ showProjectResetModal: false });
-        const response = await resetProject(
-            this.props.project,
-            this.props.access
+    deleteOwnedProject = async (projectName, projectShared) => {
+        console.log('deleting ' + projectName);
+        const response = await deleteProject(
+            this.props.access,
+            projectName,
+            projectShared,
         );
-        if (response.status === 401) {
-            this.setState({ showLoginModal: true });
-        } else {
-            this.setState({
-                editorCode: response.data.code,
-                editorFilename: response.data.filename,
-                editorFilenameInput: response.data.filename,
-                editorFiles: response.files,
-                editorSceneInput: response.data.scene,
-                videoScene: response.data.scene
-            });
-            this.props.onNewProject(response.data.project);
-        }
-    };
+        response && this.setState({redirectToProjects: true});
+    }
 
     fetchFileContents = async node => {
         // double clicking a directory has no effect
         if ("children" in node) {
             return;
         }
-        const response = await getFileContents(node, this.props.access);
+        const response = await getFileContents(
+            node,
+            this.props.access,
+            this.props.projectName,
+            this.props.projectOwner,
+            this.props.projectIsShared,
+        );
         this.setState({
             editorFilename: utils.getNodePathList(node).join("/"),
             editorCode: response.data["content"],
@@ -466,7 +473,10 @@ class App extends React.Component {
         const response = await getDirectoryContents(
             node,
             this.props.access,
-            this.state.editorFiles
+            this.state.editorFiles,
+            this.props.projectName,
+            this.props.projectOwner,
+            this.props.projectIsShared,
         );
         this.setState({ editorFiles: response }, () => {
             if (cb) {
@@ -498,12 +508,13 @@ class App extends React.Component {
     logOut = () => {
         // TODO: go to homepage
         this.props.onLogOut();
-        this.restoreSession("");
+        // this.restoreSession("");
         this.setState({
             videoScene: "",
             videoReturncode: -1,
             videoError: consts.DEFAULT_LOGS,
-            editorSaveMessage: ""
+            editorSaveMessage: "",
+            redirectToHome: true,
         });
     };
 
@@ -516,8 +527,8 @@ class App extends React.Component {
                 videoError: responseData.result["stderr"],
                 videoReturncode: 0,
                 videoScene: responseData["scene"],
-                videoFile: responseData["filename"],
-                videoReload: !this.state.videoReload
+                videoReload: !this.state.videoReload,
+                videoMediaPath: responseData["media_path"],
             });
         } else {
             let error;
@@ -562,6 +573,11 @@ class App extends React.Component {
                 }
                 if (renderStatus === "finished") {
                     this.handleRenderFinished(response.data);
+                } else if (renderStatus === "failed") {
+                    this.setState({
+                        editorRenderStatus: renderStatus,
+                        renderTimer: null,
+                    });
                 } else {
                     this.setState({
                         editorRenderStatus: renderStatus,
@@ -575,17 +591,32 @@ class App extends React.Component {
     };
 
     handleRender = async () => {
+        let requestScene = this.state.editorSceneInput;
         const response = await postRender(
             this.state.editorFilenameInput,
             this.state.editorSceneInput,
-            this.props.project,
-            this.props.access
+            this.state.editorResolution,
+            this.props.projectName,
+            this.props.projectOwner,
+            this.props.projectIsShared,
+            this.props.access,
         );
         if (
             response.response !== undefined &&
             response.response.status === 401
         ) {
             this.setState({ showLoginModal: true });
+        } else if (
+            'info' in response.data &&
+            response.data.info === 'cached'
+        ) {
+            this.setState({
+                videoMediaPath: response.data["location"],
+                videoReturncode: 0,
+                videoReload: !this.state.videoReload,
+                videoScene: requestScene,
+                videoError: 'Viewing cached video',
+            });
         } else {
             this.setState({ editorRenderStatus: "request-sent" });
             this.checkRender(response.data["job_id"]);
@@ -599,11 +630,12 @@ class App extends React.Component {
         // TODO: implement save-on-signup
         const response = await saveProject(
             this.state.editorFilename,
-            this.props.project,
+            this.props.projectName,
             this.state.editorSceneInput,
             this.state.editorCode,
-            this.props.access
+            this.props.access,
         );
+        console.log(response);
 
         if (
             response.response !== undefined &&
@@ -628,11 +660,20 @@ class App extends React.Component {
         }
     };
 
+    handleResolutionChange = (event) => {
+        this.setState({editorResolution: event.target.value});
+    }
+
     render() {
+        if (this.state.redirectToProjects) {
+            return <Redirect to={{pathname: "/projects"}}/>;
+        } else if (this.state.redirectToHome) {
+            return <Redirect to={{pathname: "/"}}/>;
+        }
         return (
             <div className="page-container">
                 <div className="header">
-                    <NavLink to="/home">
+                    <NavLink to="/">
                         <div className="logo-container">
                             <img
                                 className="banner-logo"
@@ -645,21 +686,34 @@ class App extends React.Component {
                             </div>
                         </div>
                     </NavLink>
-                    <LoginInfo
-                        username={this.props.username}
-                        logOut={this.logOut}
-                    />
+                    <span>
+                        {this.props.projectName + " by " + this.props.projectOwner + " (" + (this.props.projectIsShared ? "shared" : "private") + ")"}
+                    </span>
+                    <div className="appbar-buttons">
+                        <NavLink to="/projects">
+                            <IconButton >
+                                <SubdirectoryArrowRightIcon />
+                            </IconButton>
+                        </NavLink>
+                        <LoginInfo
+                            username={this.props.username}
+                            logOut={this.logOut}
+                            from={"/create"}
+                        />
+                    </div>
                 </div>
                 <div className="app-container">
                     <NotVideo
                         error={this.state.videoError}
                         filename={this.state.videoFile}
-                        project={this.props.project}
+                        project={this.props.projectName}
+                        resolution={this.state.videoResolution}
                         returncode={this.state.videoReturncode}
                         scene={this.state.videoScene}
                         username={this.props.username}
                         access={this.props.access}
                         reload={this.state.videoReload}
+                        mediaPath={this.state.videoMediaPath}
                     />
                     <Editor
                         animating={this.state.editorAnimating}
@@ -672,11 +726,14 @@ class App extends React.Component {
                         files={this.state.editorFiles}
                         readOnly={
                             this.state.displayingLibraryCode ||
-                            this.props.access.length === 0
+                            this.props.access.length === 0 ||
+                            this.props.projectIsShared
                         }
                         renderStatus={this.state.editorRenderStatus}
+                        resolution={this.state.editorResolution}
                         saveMessage={this.state.editorSaveMessage}
                         sceneInput={this.state.editorSceneInput}
+                        shared={this.props.projectIsShared}
                         expandedKeys={this.state.treeExpandedKeys}
                         onAnimationComplete={this.handleAnimationComplete}
                         onCodeChange={this.handleCodeChange}
@@ -690,11 +747,12 @@ class App extends React.Component {
                         onNewFileName={this.handleNewFileName}
                         onRender={this.handleRender}
                         onRenderCanceled={this.handleRenderCanceled}
+                        onResolutionChange={this.handleResolutionChange}
                         onSave={this.handleSave}
                         onSceneChange={this.handleSceneChange}
                         onSetAutosaveTimeout={this.handleSetAutosaveTimeout}
                         onToggle={this.handleToggle}
-                        onProjectReset={this.handleProjectReset}
+                        onProjectDelete={this.handleProjectDelete}
                         onTreeChange={this.treeChange}
                         onTreeExpand={this.handleTreeExpand}
                         onFileFetch={this.fetchFileContents}
@@ -707,10 +765,15 @@ class App extends React.Component {
                         loginSuccess={this.loginSuccess}
                     />
                 )}
-                {this.state.showProjectResetModal && (
-                    <ResetModal
+                {this.state.showProjectDeleteModal && (
+                    <DeleteModal
                         handleModalClick={this.handleModalClick}
-                        handleResetProject={this.handleResetProject}
+                        handleProjectDelete={() => {
+                            this.deleteOwnedProject(
+                                this.props.projectName,
+                                this.props.projectIsShared,
+                            );
+                        }}
                     />
                 )}
             </div>

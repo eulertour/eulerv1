@@ -11,8 +11,13 @@ const theme = createMuiTheme({
     palette: {
         primary: {
             main: "#b43daf",
-            light: "#c363bf",
-            dark: "#7d2a7a",
+            light: "#f8a5ff",
+            dark: "#9245ab",
+        },
+        secondary: {
+            main: "#79e7f3",
+            light: "#afffff",
+            dark: "#40b5c0",
         },
     },
     typography: { useNextVariants: true },
@@ -26,10 +31,13 @@ class Main extends React.Component {
             access: cookies.get('access') || '',
             refresh: cookies.get('refresh') || '',
             username: '',
-            project: '',
-        }
+            projectName: '',
+            projectOwner: '',
+            projectIsShared: '',
+        };
         this.handleAuth = this.handleAuth.bind(this);
         this.handleLogOut = this.handleLogOut.bind(this);
+        this.handleUsernameReceived = this.handleUsernameReceived.bind(this);
     }
 
     handleAuth(jwtResponse) {
@@ -43,13 +51,16 @@ class Main extends React.Component {
         });
     }
 
-    handleFetchUsername = (username)  => {
+    handleUsernameReceived(username) {
         this.setState({username: username});
     }
 
-    handleNewProject = (project) => {
-        console.log(project);
-        this.setState({project: project});
+    handleNewProject = (projectName, projectOwner, projectIsShared) => {
+        this.setState({
+            projectName: projectName,
+            projectOwner: projectOwner,
+            projectIsShared: projectIsShared,
+        });
     }
 
     handleLogOut() {
@@ -60,15 +71,28 @@ class Main extends React.Component {
             access: '',
             refresh: '',
             username: '',
+            projectName: '',
+            projectOwner: '',
+            projectIsShared: '',
         });
     }
 
     render() {
         return (
+            <MuiThemeProvider theme={theme}>
             <CookiesProvider>
             <BrowserRouter>
                 <Switch>
-                    <Route path="/home" render={() => <Home />}/>
+                    <Route exact path="/" render={() =>
+                        <Home
+                            access={this.state.access}
+                            refresh={this.state.refresh}
+                            username={this.state.username}
+                            onLogOut={this.handleLogOut}
+                            onAuth={this.handleAuth}
+                            onUsernameReceived={this.handleUsernameReceived}
+                        />
+                    }/>
                     <Route path="/login" render={() =>
                         <LoginPage
                             access={this.state.access}
@@ -93,15 +117,17 @@ class Main extends React.Component {
                             }}
                         />
                     }/>
-                    <Route exact path="/" render={() =>
+                    <Route path="/create" render={() =>
                         <App
                             access={this.state.access}
                             refresh={this.state.refresh}
                             username={this.state.username}
-                            project={this.state.project}
+                            projectName={this.state.projectName}
+                            projectOwner={this.state.projectOwner}
+                            projectIsShared={this.state.projectIsShared}
                             onLogOut={this.handleLogOut}
                             onAuth={this.handleAuth}
-                            onFetchUsername={this.handleFetchUsername}
+                            onUsernameReceived={this.handleUsernameReceived}
                             onNewProject={this.handleNewProject}
                         />
                     }/>
@@ -110,13 +136,17 @@ class Main extends React.Component {
                             <Projects
                                 access={this.state.access}
                                 refresh={this.state.refresh}
+                                username={this.state.username}
+                                onLogOut={this.handleLogOut}
                                 onNewProject={this.handleNewProject}
+                                onUsernameReceived={this.handleUsernameReceived}
                             />
                         </MuiThemeProvider>
                     }/>
                 </Switch>
             </BrowserRouter>
             </CookiesProvider>
+            </MuiThemeProvider>
         );
     }
 }

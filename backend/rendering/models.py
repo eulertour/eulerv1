@@ -21,15 +21,25 @@ class Project(models.Model):
         null=True,
     )
     name = models.CharField(max_length=100)
+    is_shared = models.BooleanField(default=False)
 
     def get_path(self):
-        return os.path.join(
-            settings.MEDIA_ROOT,
-            settings.USER_MEDIA_DIR,
-            self.owner.username,
-            settings.PROJECT_DIR,
-            self.name,
-        )
+        if self.is_shared:
+            return os.path.join(
+                settings.MEDIA_ROOT,
+                settings.SHARED_MEDIA_DIR,
+                settings.PROJECT_DIR,
+                self.owner.username,
+                self.name,
+            )
+        else:
+            return os.path.join(
+                settings.MEDIA_ROOT,
+                settings.USER_MEDIA_DIR,
+                self.owner.username,
+                settings.PROJECT_DIR,
+                self.name,
+            )
 
     def get_source_path(self):
         return os.path.join(self.get_path(), settings.SOURCE_DIR)
@@ -39,7 +49,7 @@ class Project(models.Model):
         super(Project, self).delete()
 
     class Meta:
-        unique_together = ('owner', 'name')
+        unique_together = ('owner', 'name', 'is_shared')
 
 def in_directory(path, directory, allow_symlink=False):
     # make both absolute
@@ -63,22 +73,28 @@ def is_user_path(path, username):
         os.path.join(os.sep + settings.USER_MEDIA_DIR, username)
     )
 
-def get_valid_media_path(project_name, username, filename):
-    user_directory = os.path.normpath(os.path.join(
-        settings.USER_MEDIA_DIR,
-        username,
-        settings.PROJECT_DIR,
-        project_name,
-        settings.SOURCE_DIR,
-    ))
-    media_path = os.path.normpath(os.path.join(
-        user_directory,
-        filename,
-    ))
+def get_valid_media_path(project_name, username, filename, is_shared=False, is_directory=False):
+    if is_shared:
+        user_directory = os.path.normpath(os.path.join(
+            settings.SHARED_MEDIA_DIR,
+            settings.PROJECT_DIR,
+            username,
+            project_name,
+            settings.SOURCE_DIR,
+        ))
+    else:
+        user_directory = os.path.normpath(os.path.join(
+            settings.USER_MEDIA_DIR,
+            username,
+            settings.PROJECT_DIR,
+            project_name,
+            settings.SOURCE_DIR,
+        ))
+    media_path = os.path.normpath(os.path.join(user_directory, filename))
 
     valid = True
-    # can't overwrite user directory
-    if (media_path == user_directory):
+    # files can't overwrite directories
+    if not is_directory and os.path.isdir(os.path.join(settings.MEDIA_ROOT, media_path)):
         valid = False
     # must be underneath user directory
     if not os.path.realpath(media_path).startswith(
@@ -104,6 +120,7 @@ class Module(models.Model):
             instance.project.name,
             instance.owner.username,
             filename,
+            is_shared=instance.project.is_shared,
         )
 
     def short_path(self):

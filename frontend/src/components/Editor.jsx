@@ -1,14 +1,17 @@
 import React, { Component } from "react";
 import { Controlled as CodeMirror } from "react-codemirror2";
 import saveIcon from "../assets/icon-save@3x.svg";
-// import settingsIcon from '../assets/icon-settings@3x.svg';
-import TreeExample from "../components/Tree.jsx";
+import TreeExample from "./Tree.jsx";
+import { SettingsMenu } from "./SettingsMenu.jsx";
 import collapseTreeIcon from "../assets/icon-left@3x.svg";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { faEraser } from "@fortawesome/free-solid-svg-icons";
 import { RenderButton } from "./RenderButton";
 import { Tooltip } from "@material-ui/core";
+import { withStyles } from '@material-ui/core/styles';
+import SettingsIcon from '@material-ui/icons/Settings';
+import grey from '@material-ui/core/colors/grey';
 require("codemirror/lib/codemirror.css");
 require("codemirror/theme/material.css");
 require("codemirror/theme/neat.css");
@@ -20,12 +23,34 @@ require("./Editor.css");
 
 library.add(faEraser);
 
+const styles = theme => ({
+    settingsButton: {
+        backgroundColor: "#b43daf",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        height: "100%",
+        borderRightWidth: 1,
+        borderRightStyle: "solid",
+        borderRightColor: grey[400],
+        padding: "0 2px",
+        '&:hover': {
+            backgroundColor: "#8c3087",
+        }
+    },
+    settingsIcon: {
+        color: theme.palette.common.white,
+        fontSize: "1.3em",
+    }
+});
+
 class Editor extends Component {
     state = {
         menuOpen: false,
         treeCollapsed: false,
-        gutterWidth: -1
+        gutterWidth: -1,
     };
+
 
     componentDidUpdate() {
         // a hack to make sure the expand button and gutter have equal width
@@ -70,7 +95,7 @@ class Editor extends Component {
                 </div>
             </div>
         );
-        let saveButton = (
+        let saveButton = this.props.shared ? null : (
             <Tooltip title="Save File" placement="top">
                 <img
                     className="file-banner-button"
@@ -80,12 +105,12 @@ class Editor extends Component {
                 />
             </Tooltip>
         );
-        let projectEraseButton = (
+        let projectEraseButton = this.props.shared ? null : (
             <Tooltip title="Erase Project" placement="top">
                 <FontAwesomeIcon
                     className="file-banner-button eraser"
                     icon={["fas", "eraser"]}
-                    onClick={this.props.onProjectReset}
+                    onClick={this.props.onProjectDelete}
                 />
             </Tooltip>
         );
@@ -104,6 +129,7 @@ class Editor extends Component {
     };
 
     render() {
+        const { classes } = this.props;
         return (
             <div className="manim-input">
                 <div className="editor-container">
@@ -113,6 +139,7 @@ class Editor extends Component {
                         cursor={this.props.cursor}
                         animating={this.props.animating}
                         expandedKeys={this.props.expandedKeys}
+                        shared={this.props.shared}
                         onAnimationComplete={this.props.onAnimationComplete}
                         onFileDelete={this.props.onFileDelete}
                         onFileMove={this.props.onFileMove}
@@ -168,6 +195,10 @@ class Editor extends Component {
                             value={this.props.sceneInput}
                             onChange={this.props.onInputSceneChange}
                         />
+                        <SettingsMenu
+                            resolution={this.props.resolution}
+                            onResolutionChange={this.props.onResolutionChange}
+                        />
                         <RenderButton
                             onRender={this.props.onRender}
                             renderStatus={this.props.renderStatus}
@@ -180,4 +211,4 @@ class Editor extends Component {
     }
 }
 
-export default Editor;
+export default withStyles(styles, { withTheme: true })(Editor);

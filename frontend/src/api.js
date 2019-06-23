@@ -3,38 +3,99 @@ import axios from "axios";
 import _ from "lodash";
 import * as utils from "./utils.js";
 
-export function resetProject(project, access) {
+export function saveProject(
+    editorFilename,
+    project,
+    editorSceneInput,
+    editorCode,
+    access
+) {
     return axios
-        .delete(consts.PROJECT_DELETE_URL, {
-            params: { project: project },
-            headers: getHeadersDict(access)
-        })
+        .post(
+            consts.SAVE_URL,
+            {
+                // TODO: this should be a path list
+                name: editorFilename,
+                project: project,
+                scene: editorSceneInput,
+                code: editorCode,
+                directory: false
+            },
+            { headers: getHeadersDict(access) }
+        )
         .then(response => {
-            let files = response.data.files.map(obj => {
-                if (obj.directory) {
-                    delete obj.directory;
-                    let childrenNotLoaded = consts.CHILDREN_NOT_LOADED;
-                    childrenNotLoaded[0]["id"] = childrenNotLoaded[0]["name"];
-                    obj["children"] = childrenNotLoaded;
-                    obj["loading"] = true;
-                } else {
-                    delete obj.directory;
-                }
-                if (obj["library"]) {
-                    obj["readOnly"] = true;
-                }
-                obj["id"] = obj["name"];
-                return obj;
-            });
-            return { ...response, files };
+            return response;
         })
         .catch(error => {
             return error.response;
         });
 }
 
+export function fetchProjects(access, shared) {
+    return axios
+        .get(consts.PROJECTS_URL, {
+            params: {shared: shared},
+            headers: getHeadersDict(access),
+        })
+        .then(response => {
+            return response;
+        })
+        .catch(error => {
+            console.log(error.response);
+        });
+}
+
+export function shareProject(
+    access,
+    projectName,
+    projectOwner,
+    projectShared,
+    shareName,
+) {
+    return axios
+        .post(
+            consts.PROJECTS_URL,
+            {
+                projectName: projectName,
+                projectOwner: projectOwner,
+                projectShared: projectShared,
+                shareName: shareName,
+            },
+            { headers: getHeadersDict(access) }
+        )
+        .then(response => {
+            return response;
+        })
+        .catch(error => {
+            console.log(error.response);
+        })
+}
+
+export function deleteProject(
+    access,
+    projectName,
+    projectShared,
+) {
+    return axios
+        .delete(consts.PROJECTS_URL, {
+            params: {
+                projectName: projectName,
+                projectShared: projectShared,
+            },
+            headers: getHeadersDict(access)
+        })
+        .then(response => {
+            return response;
+        })
+        .catch(error => {
+            console.log(error.response);
+        })
+}
+
 export function deleteFile(
     project,
+    owner,
+    shared,
     access,
     data,
     editorFiles,
@@ -50,6 +111,8 @@ export function deleteFile(
         .delete(consts.MODULE_DELETE_URL, {
             params: {
                 project: project,
+                owner: owner,
+                shared: shared ? '1' : '0',
                 name: filePath,
                 directory: "children" in delNode ? 1 : 0
             },
@@ -58,6 +121,8 @@ export function deleteFile(
         .then(() => {
             let filesCopy = _.cloneDeep(editorFiles);
             let delNode = utils.getNodeFromPathList(filesCopy, pathList);
+            console.log('delNode');
+            console.log(delNode);
             if ("directory" in delNode) {
                 _.remove(delNode.directory.children, o => {
                     return _.isEqual(o, delNode);
@@ -210,34 +275,6 @@ export function newFileName(
         });
 }
 
-export function saveProject(
-    editorFilename,
-    project,
-    editorSceneInput,
-    editorCode,
-    access
-) {
-    return axios
-        .post(
-            consts.SAVE_URL,
-            {
-                // TODO: this should be a path list
-                name: editorFilename,
-                project: project,
-                scene: editorSceneInput,
-                code: editorCode,
-                directory: false
-            },
-            { headers: getHeadersDict(access) }
-        )
-        .then(response => {
-            return response;
-        })
-        .catch(error => {
-            return error;
-        });
-}
-
 export function checkRenderStatus(job_id) {
     return axios
         .get(consts.RENDER_URL + job_id)
@@ -249,13 +286,15 @@ export function checkRenderStatus(job_id) {
         });
 }
 
-export function getFileContents(node, access) {
+export function getFileContents(node, access, project, owner, shared) {
     return axios
         .post(
             consts.GET_FILES_URL,
             {
-                project: node.project,
-                pathList: node.id.split("/")
+                project: project,
+                owner: owner,
+                shared: shared,
+                pathList: node.id.split("/"),
             },
             { headers: getHeadersDict(access) }
         )
@@ -272,15 +311,24 @@ export function getFileContents(node, access) {
         });
 }
 
-export function getDirectoryContents(node, access, editorFiles) {
+export function getDirectoryContents(
+    node,
+    access,
+    editorFiles,
+    project,
+    owner,
+    shared,
+) {
     const pathList = node.id.split("/");
 
     return axios
         .post(
             consts.GET_FILES_URL,
             {
-                project: node.project,
-                pathList: pathList
+                project: project,
+                owner: owner,
+                shared: shared,
+                pathList: pathList,
             },
             { headers: getHeadersDict(access) }
         )
@@ -325,37 +373,49 @@ export function getDirectoryContents(node, access, editorFiles) {
 export function postRender(
     editorFilenameInput,
     editorSceneInput,
+    editorResolution,
     project,
-    access
+    owner,
+    shared,
+    access,
 ) {
     return axios
         .post(
             consts.RENDER_URL,
             {
-                filename: editorFilenameInput,
+                filepath: editorFilenameInput,
                 scene: editorSceneInput,
-                project: project
+                resolution: editorResolution,
+                project: project,
+                owner: owner,
+                shared: shared,
             },
             { headers: getHeadersDict(access) }
         )
         .then(response => {
-            if ("job_id" in response.data) {
-                return response;
-            }
+            return response;
         })
         .catch(error => {
             return error;
         });
 }
 
-export function fetchRestoreSession(access, editorFilename, project, logout) {
-    console.log("filename: " + editorFilename);
+export function fetchRestoreSession(
+    access,
+    filename,
+    project,
+    owner,
+    shared,
+    logout,
+) {
     return axios
         .post(
             consts.SESSION_URL,
             {
-                name: editorFilename,
+                filename: filename,
                 project: project,
+                owner: owner,
+                shared: shared,
                 directory: true
             },
             { headers: getHeadersDict(access) }
@@ -387,18 +447,42 @@ export function fetchRestoreSession(access, editorFilename, project, logout) {
                 "data" in error.response
             ) {
                 let data = error.response.data;
+                console.log(error.response);
                 if (
                     error.response.status === 401 &&
-                    data.code === "token_not_valid" &&
-                    data.detail === "Given token not valid for any token type"
+                    data.code && data.code === "token_not_valid" &&
+                    data.detail && data.detail === "Given token not valid for any token type"
                 ) {
                     alert(
                         "there was an error processing your token, " +
                             "please log in again"
                     );
                     logout();
+                } else if (
+                    error.response.status === 403 &&
+                    data.info && data.info === "no project specified or session to restore"
+                ) {
+                    return {'info': data.info}
                 }
             }
             console.log(error.response);
+        });
+}
+
+export function fetchUsernameFromToken(accessToken) {
+    return axios
+        .post(
+            consts.USERNAME_URL,
+            {
+                access: accessToken,
+            },
+            { headers: getHeadersDict(accessToken) }
+        )
+        .then(response => {
+            return { ...response };
+        })
+        .catch(error => {
+            console.log(error);
+            console.log(error.data);
         });
 }

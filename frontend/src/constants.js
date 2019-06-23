@@ -11,6 +11,7 @@ export const API_URL = (process.env.REACT_APP_API_URL === undefined ?
 export const LOGIN_URL          = API_URL + 'login/';
 export const SIGNUP_URL         = API_URL + 'signup/';
 export const SESSION_URL        = API_URL + 'session/';
+export const USERNAME_URL       = API_URL + 'username/';
 
 export const RENDER_URL         = API_URL + 'render/';
 
@@ -27,3 +28,9 @@ export const NO_CHILDREN = [{name: '(empty)', empty: true, readOnly: true}];
 export const CHILDREN_NOT_LOADED = [{name: '(loading...)', empty: true, readOnly: true}];
 export const UNNAMED_FILE_ID = 'unnamed';
 export const MENU_ID = 'menuId';
+export const RESOLUTION_DICT = {
+    "1440p": "/1440p60/",
+    "1080p": "/1080p60/",
+    "720p": "/720p30/",
+    "480p": "/480p15/",
+}
