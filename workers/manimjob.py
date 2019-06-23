@@ -35,7 +35,7 @@ def render_scene(
             "-v", f"{server_source_path}:/root/source",
             "-v", f"{server_video_output_path}:/root/video",
             "-v", f"{server_tex_path}:/root/tex",
-            "manim",
+            "eulertour/manim:latest",
             "-c",
             "umask 002 && " +
             "cd /root/source && " +
