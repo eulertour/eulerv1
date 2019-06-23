@@ -94,12 +94,16 @@ server {
     location /auth {
         internal;
         set $query '';
-        if ($request_uri ~ "([^\?]+)\?jwt=([^&]+)(&.*)?$") {
+        if ($request_uri ~ "([^\?]+)\?v=.*$") {
             set $orig_uri $1;
-            set $auth $2;
+            set $auth "";
+        }
+        if ($request_uri ~ "([^\?]+)\?v=\d+&jwt=([^&]+)$") {
+            set $orig_uri $1;
+            set $auth "Bearer $2";
         }
         proxy_pass_request_body off;
-        proxy_set_header        Authorization "Bearer ${auth}";
+        proxy_set_header        Authorization "${auth}";
         proxy_set_header        X-Original-URI $orig_uri;
         proxy_set_header        Content-Length "";
         proxy_pass              https://api.dev.eulertour.com/api/video/;
