@@ -11,18 +11,26 @@ import List from '@material-ui/core/List';
 import ListItem from '@material-ui/core/ListItem';
 import ListItemIcon from '@material-ui/core/ListItemIcon';
 import ListItemText from '@material-ui/core/ListItemText';
-import InboxIcon from '@material-ui/icons/MoveToInbox';
 import TextField from '@material-ui/core/TextField';
 import PropTypes from 'prop-types';
 import MenuIcon from '@material-ui/icons/Menu';
 import SearchIcon from '@material-ui/icons/Search';
 import { fade } from '@material-ui/core/styles/colorManipulator';
-import axios from 'axios';
-import * as consts from './constants.js';
-import { Redirect } from 'react-router-dom';
+import { Redirect, NavLink } from 'react-router-dom';
+import { fetchProjects, shareProject, deleteProject } from "./api";
+import CloudUploadIcon from '@material-ui/icons/CloudUpload';
+import CloudDownloadIcon from '@material-ui/icons/CloudDownload';
+import OpenInBrowserIcon from '@material-ui/icons/OpenInBrowser';
+import { ShareProjectModal } from "./components/ShareProjectModal";
+import DeleteIcon from '@material-ui/icons/Delete';
+import PersonIcon from '@material-ui/icons/Person';
+import GroupIcon from '@material-ui/icons/Group';
+import { DeleteProjectModal } from "./components/DeleteProjectModal";
+import { LoginInfo } from "./components/LoginInfo";
 
 
 const drawerWidth = 260;
+const appBarHeight = 70;
 const styles = theme => ({
   root: {
     display: 'flex',
@@ -37,7 +45,7 @@ const styles = theme => ({
       duration: theme.transitions.duration.leavingScreen,
     }),
     zIndex: theme.zIndex.drawer + 1,
-    minHeight: 70,
+    minHeight: appBarHeight,
     backgroundColor: theme.palette.common.white,
     boxShadow: "2px 6px 10px 0 rgba(115, 143, 147, .4)",
   },
@@ -51,6 +59,7 @@ const styles = theme => ({
   },
   menuButton: {
     padding: 12,
+    marginLeft: 5,
   },
   hide: {
     display: 'none',
@@ -58,20 +67,16 @@ const styles = theme => ({
   drawerPaper: {
     width: drawerWidth,
   },
-  drawerHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    ...theme.mixins.toolbar,
-    justifyContent: 'space-between',
-  },
   content: {
     flexGrow: 1,
-    padding: theme.spacing.unit * 3,
+    paddingLeft: theme.spacing.unit * 3,
+    paddingRight: theme.spacing.unit * 3,
     transition: theme.transitions.create('margin', {
       easing: theme.transitions.easing.sharp,
       duration: theme.transitions.duration.leavingScreen,
     }),
     marginLeft: 0,
+    marginTop: 20,
   },
   contentShift: {
     transition: theme.transitions.create('margin', {
@@ -85,6 +90,7 @@ const styles = theme => ({
     marginRight: theme.spacing.unit,
   },
   search: {
+    display: 'none',
     position: 'relative',
     backgroundColor: fade(theme.palette.common.white, 0.15),
     '&:hover': {
@@ -118,10 +124,8 @@ const styles = theme => ({
     transition: theme.transitions.create('width'),
     width: '100%',
   },
-  toolbar: {
-      display: 'flex',
-      justifyContent: 'flex-start',
-      ...theme.mixins.toolbar,
+  appBarSpacer: {
+    height: appBarHeight,
   },
   colorBlack: {
     color: theme.palette.common.black,
@@ -131,23 +135,53 @@ const styles = theme => ({
     width: '100%',
     padding: 0,
   },
-  list: {
+  drawerList: {
     backgroundColor: theme.palette.background.paper,
+  },
+  contentListRoot: {
+    paddingTop: 0
+  },
+  projectItem: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    padding: '4px 16px 4px 16px',
+  },
+  projectItemButton: {
+    // padding: '8px',
+  },
+  projectsLogoContainer: {
+    display: 'flex', 
+    flexDirection: 'row',
+    justifyContent: 'start',
+    alignItems: 'center',
+    marginRight: '50px',
+  },
+  toolbar: {
+    display: 'flex',
+    justifyContent: 'space-between',
   }
 });
 
 class Projects extends React.Component {
     state = {
         drawerOpen: false,
-        sharedProjects: true,
+        sharedProjects: false,
         projects: [],
+        owners: [],
         searchInput: '',
         redirectToLab: false,
+        showShareProjectModal: false,
+        showDeleteProjectModal: false,
+        shareName: '',
+        selectedProject: '',
     }
 
-    chooseProject = (project) => {
-        console.log('choosing...');
-        this.props.onNewProject(project);
+    chooseProject = (projectName, projectOwner, projectIsShared) => {
+        this.props.onNewProject(
+            projectName,
+            projectOwner,
+            projectIsShared,
+        );
         this.setState({redirectToLab: true});
     }
 
@@ -161,30 +195,80 @@ class Projects extends React.Component {
         }
     }
 
-    getHeadersDict(accessToken) {
-        return accessToken.length !== 0 ?
-            {'Authorization': 'Bearer ' + this.props.access} :
-            {};
+    fetchProjects = async (accessToken) => {
+        const response = await fetchProjects(
+            accessToken,
+            this.state.sharedProjects ? 1 : 0,
+        );
+        response && this.setState({
+            projects: response.data.projects,
+            owners: response.data.owners,
+        });
+        this.props.onUsernameReceived(response.data.username);
+        console.log(this.state.projects);
     }
 
-    componentDidMount = () => {
-        axios.get(consts.PROJECTS_URL, {
-            params: {q: this.state.searchInput},
-            headers: this.getHeadersDict(this.props.access),
-        })
-        .then(response => {
-            this.setState({projects: response.data.projects})
-        })
-        .catch(error => {
-            console.log(error.response);
-        });
+    componentDidUpdate = async (prevProps, prevState) => {
+        if (this.state.sharedProjects !== prevState.sharedProjects) {
+            this.fetchProjects(this.props.access);
+        }
+    }
+
+    componentDidMount() {
+        if (this.props.access.length > 0) {
+            this.fetchProjects(this.props.access);
+        } else {
+            this.setState({sharedProjects: true});
+        }
+    }
+
+    handleModalClick = event => {
+        if ("closeonclick" in event.target.attributes) {
+            this.setState({
+                showShareProjectModal: false,
+                showProjectDeleteModal: false,
+                selectedProject: '',
+                shareName: '',
+            });
+        }
+    }
+
+    handleShareNameChange = (event) => {
+        this.setState({shareName: event.target.value});
+    }
+
+    handleCopyProject = async (
+        sourceProjectName,
+        sourceProjectOwner,
+        sourceProjectShared,
+        destProjectName,
+    ) => {
+        const response = await shareProject(
+            this.props.access,
+            sourceProjectName,
+            sourceProjectOwner,
+            sourceProjectShared,
+            destProjectName,
+        );
+        this.setState({showShareProjectModal: false});
+    }
+
+    deleteOwnedProject = async (projectName, projectShared) => {
+        console.log('deleting ' + projectName);
+        const response = await deleteProject(
+            this.props.access,
+            projectName,
+            projectShared,
+        );
+        this.setState({showProjectDeleteModal: false});
+        response && this.fetchProjects(this.props.access);
     }
 
     render() {
         const { classes } = this.props;
         const { drawerOpen, sharedProjects, projects, searchInput } = this.state;
         if (this.state.redirectToLab) {
-            return <Redirect to={{pathname: "/"}} />;
+            return <Redirect to={{pathname: "/create"}} push={true}/>;
         }
         return (
             <div className={classes.root}>
@@ -193,51 +277,61 @@ class Projects extends React.Component {
                     className={classes.appBar}
                 >
                     <Toolbar
-                        className={classes.toolbar}
+                        classes={{root: classes.toolbar}}
                         disableGutters={true}
                     >
-                        <div className="projects-logo-container">
-                            <div className="logo-container">
-                                <IconButton
-                                    color="default"
-                                    aria-label="Open drawer"
-                                    onClick={this.handleDrawerToggle}
-                                    className={classes.menuButton}
-                                    classes={{
-                                        label: classes.colorBlack,
-                                    }}
-                                >
-                                    <MenuIcon />
-                                </IconButton>
-                                <img
-                                    className="banner-logo"
-                                    src={logo}
-                                    alt="EulerTour logo"
-                                />
-                                <div className="banner-text">
-                                    EulerTour
-                                    <sup className="release">&alpha;</sup>
+                        <div className={classes.projectsLogoContainer}>
+                            <IconButton
+                                color="default"
+                                aria-label="Open drawer"
+                                onClick={this.handleDrawerToggle}
+                                className={classes.menuButton}
+                                classes={{
+                                    label: classes.colorBlack,
+                                }}
+                            >
+                                <MenuIcon />
+                            </IconButton>
+                            <NavLink to="/">
+                                <div className="logo-container">
+                                    <img
+                                        className="banner-logo"
+                                        src={logo}
+                                        alt="EulerTour logo"
+                                    />
+                                    <div className="banner-text">
+                                        EulerTour
+                                        <sup className="release">&alpha;</sup>
+                                    </div>
                                 </div>
-                            </div>
+                            </NavLink>
                         </div>
-                       <div className={classes.search}>
-                         <div className={classes.searchIcon}>
-                           <SearchIcon/>
-                         </div>
-                         <TextField
-                           variant="outlined"
-                           value={searchInput}
-                           onKeyDown={this.checkSearch}
-                           onChange={(e) => this.setState({searchInput: e.target.value})}
-                           InputProps={{
-                             placeholder:"Search…",
-                             classes:{
-                               root: classes.inputRoot,
-                               input: classes.inputInput,
-                             }
-                           }}
-                         />
-                       </div>
+                        <div className={classes.search}>
+                          <div className={classes.searchIcon}>
+                            <SearchIcon/>
+                          </div>
+                          <TextField
+                            variant="outlined"
+                            value={searchInput}
+                            onKeyDown={this.checkSearch}
+                            onChange={(e) => this.setState({searchInput: e.target.value})}
+                            InputProps={{
+                              placeholder:"Search…",
+                              classes:{
+                                root: classes.inputRoot,
+                                input: classes.inputInput,
+                              }
+                            }}
+                          />
+                        </div>
+                        <LoginInfo
+                            username={this.props.username}
+                            logOut={() => {
+                                this.props.onLogOut();
+                                this.fetchProjects("");
+                            }}
+                            from={"/projects"}
+                        />
                     </Toolbar>
                 </AppBar>
                 <div
@@ -245,16 +339,83 @@ class Projects extends React.Component {
                         [classes.contentShift]: drawerOpen,
                     })}
                 >
-                    <div className={classes.drawerHeader} />
-                    {sharedProjects ? "shared projects" : "your projects"}
-                    <List classes={{root: classes.list}}>
-                      {projects.map(projectName => (
+                    <div className={classes.appBarSpacer} />
+                    {sharedProjects ?
+                        "shared projects" :
+                        "your projects (" +
+                        (this.props.username.length > 0 ?
+                            this.props.username : "guest") +
+                        ")"
+                    }
+                    <List
+                        className={classes.drawerList}
+                        classes={{root: classes.contentListRoot}}
+                    >
+                      {projects.map((projectName, index) => (
                         <ListItem
-                          button
+                          classes={{root: classes.projectItem}}
                           divider
                           key={projectName}
-                          onClick={() => {this.chooseProject(projectName)}}>
-                          {projectName}
+                        >
+                          {projectName + (this.state.sharedProjects ? ' by ' + this.state.owners[index] : '')}
+                          <div className={classes.projectItemButtons}>
+                                <ListItemIcon>
+                                  <IconButton
+                                    className={classes.projectItemButton}
+                                    onClick={() => {this.chooseProject(
+                                        projectName,
+                                        this.state.owners[index],
+                                        this.state.sharedProjects,
+                                    )}}
+                                  >
+                                    <OpenInBrowserIcon/>
+                                  </IconButton>
+                                </ListItemIcon>
+                              {this.state.sharedProjects ?
+                                  (this.props.username.length > 0 ?
+                                      <ListItemIcon>
+                                        <IconButton
+                                          className={classes.projectItemButton}
+                                          onClick={() => {
+                                              this.setState({
+                                                  showShareProjectModal: true,
+                                                  selectedProject: projectName,
+                                                  projectOwner: this.state.owners[index],
+                                              });
+                                          }}
+                                        >
+                                          <CloudDownloadIcon/>
+                                        </IconButton>
+                                      </ListItemIcon> : null) :
+                                  <ListItemIcon>
+                                    <IconButton
+                                      className={classes.projectItemButton}
+                                      onClick={() => {
+                                          this.setState({
+                                              showShareProjectModal: true,
+                                              selectedProject: projectName,
+                                              projectOwner: this.state.owners[index],
+                                          });
+                                      }}
+                                    >
+                                      <CloudUploadIcon/>
+                                    </IconButton>
+                                  </ListItemIcon>
+                              }
+                              {this.props.username === this.state.owners[index] &&
+                                  <ListItemIcon>
+                                    <IconButton
+                                      className={classes.projectItemButton}
+                                      onClick={() => {this.setState({
+                                        showProjectDeleteModal: true,
+                                        selectedProject: projectName,
+                                      })}}
+                                    >
+                                      <DeleteIcon/>
+                                    </IconButton>
+                                  </ListItemIcon>
+                              }
+                          </div>
                         </ListItem>)
                       )}
                     </List>
@@ -267,26 +428,68 @@ class Projects extends React.Component {
                         paper: classes.drawerPaper,
                     }}
                 >
-                    <div className={classes.toolbar} />
-                    <List>
+                    <div className={classes.appBarSpacer} />
+                    <List className={classes.drawerList}>
                       <ListItem
                         button
                         key={"yourprojects"}
-                        onClick={() => {this.setState({sharedProjects: false})}}
+                        onClick={() => {
+                            if (this.state.sharedProjects) {
+                                this.setState({
+                                    sharedProjects: false,
+                                    projects: [],
+                                })
+                            }
+                        }}
                       >
-                        <ListItemIcon><InboxIcon /></ListItemIcon>
+                        <ListItemIcon><PersonIcon /></ListItemIcon>
                         <ListItemText variant="h3" primary={"Your Projects"} />
                       </ListItem>
                       <ListItem
                         button
                         key={"sharedprojects"}
-                        onClick={() => {this.setState({sharedProjects: true})}}
+                        onClick={() => {
+                            if (!this.state.sharedProjects) {
+                                this.setState({
+                                    sharedProjects: true,
+                                    projects: [],
+                                })
+                            }
+                        }}
                       >
-                        <ListItemIcon><InboxIcon /></ListItemIcon>
+                        <ListItemIcon><GroupIcon /></ListItemIcon>
                         <ListItemText variant="h3" primary={"Shared Projects"} />
                       </ListItem>
                     </List>
                 </Drawer>
+                {this.state.showShareProjectModal && (
+                    <ShareProjectModal
+                        shareName={this.state.shareName}
+                        onModalClick={this.handleModalClick}
+                        onShareProject={() => {
+                            this.handleCopyProject(
+                                this.state.selectedProject,
+                                this.state.projectOwner,
+                                this.state.sharedProjects,
+                                this.state.shareName,
+                            );
+                            this.setState({shareName: ''});
+                        }}
+                        onShareNameChange={this.handleShareNameChange}
+                        shared={this.state.sharedProjects}
+                    />
+                )}
+                {this.state.showProjectDeleteModal && (
+                    <DeleteProjectModal
+                        onModalClick={this.handleModalClick}
+                        onDeleteProject={() => {
+                            this.deleteOwnedProject(
+                                this.state.selectedProject,
+                                this.state.sharedProjects,
+                            );
+                        }}
+                    />
+                )}
             </div>
         );
     }

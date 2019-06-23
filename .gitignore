@@ -6,7 +6,6 @@ backend/data/shared/manim
 backend/db.sqlite3
 backend/static
 backend/manimlab_api/debug.log
-*.mp4
 npm-debug.log
 
 # dependencies

@@ -200,30 +200,34 @@ class TreeExample extends React.PureComponent {
                 <div className="tree-banner">
                     <div id="tree-label">Files</div>
                     <div className="tree-buttons">
-                        <Tooltip title="New File" placement="top">
-                            <div
-                                className="new-file-button"
-                                onClick={() => this.props.onNewFile('new-file')}
-                            >
-                                <img
-                                    className="file-banner-button"
-                                    src={newFileIcon}
-                                    alt="new file"
-                                />
-                            </div>
-                        </Tooltip>
-                        <Tooltip title="New Folder" placement="top">
-                            <div
-                                className="new-dir-button"
-                                onClick={() => this.props.onNewFile('new-directory')}
-                            >
-                                <img
-                                    className="folder-banner-button"
-                                    src={newDirIcon}
-                                    alt="new directory"
-                                />
-                            </div>
-                        </Tooltip>
+                        {this.props.shared ? null :
+                            <Tooltip title="New File" placement="top">
+                                <div
+                                    className="new-file-button"
+                                    onClick={() => this.props.onNewFile('new-file')}
+                                >
+                                    <img
+                                        className="file-banner-button"
+                                        src={newFileIcon}
+                                        alt="new file"
+                                    />
+                                </div>
+                            </Tooltip>
+                        }
+                        {this.props.shared ? null :
+                            <Tooltip title="New Folder" placement="top">
+                                <div
+                                    className="new-dir-button"
+                                    onClick={() => this.props.onNewFile('new-directory')}
+                                >
+                                    <img
+                                        className="folder-banner-button"
+                                        src={newDirIcon}
+                                        alt="new directory"
+                                    />
+                                </div>
+                            </Tooltip>
+                        }
                         <div
                             className="collapse-button"
                             onClick={this.props.onTreeToggle}

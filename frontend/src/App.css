@@ -60,6 +60,10 @@ sup {
   color: #aaa;
 }
 
+.appbar-buttons {
+  display: flex;
+}
+
 .account-info {
   display: flex;
   align-items: center;

@@ -1,3 +1,4 @@
+import collections
 import os
 import pytz
 import re
@@ -128,21 +129,8 @@ class SignUp(generics.GenericAPIView):
             )
         new_user = user_serializer.save()
 
-        # create the project (TODO: refactor from Session and remove from here
-        # when there is a landing page)
-        project_serializer = ProjectSerializer(data={
-            'name': settings.DEFAULT_PROJECT,
-            'owner': new_user.pk,
-        })
-        project_serializer.is_valid(raise_exception=True)
-        new_project = project_serializer.save(
-            base_project=settings.DEFAULT_PROJECT)
-
         # create the profile
-        profile_data = {
-            'user': new_user.pk,
-            'last_project': new_project.pk,
-        }
+        profile_data = {'user': new_user.pk}
         profile_serializer = ProfileSerializer(data=profile_data)
         profile_serializer.is_valid(raise_exception=True)
         new_profile = profile_serializer.save()
@@ -164,108 +152,97 @@ class Session(generics.RetrieveAPIView):
 
     def post(self, request):
         profile = None
-        response_data = {}
-        project_name = request.data.get("project", "")
-
-        if request.user.is_anonymous:
-            if not project_name:
-                project_name = settings.DEFAULT_PROJECT
-
-            # return the defaults
-            # TODO: this response is fixed, so just return it
-            project_source_path = os.path.join(
-                settings.MEDIA_ROOT,
-                settings.SHARED_MEDIA_DIR,
-                settings.PROJECT_DIR,
-                project_name,
-                settings.SOURCE_DIR,
+        if not request.user.is_anonymous:
+            profile = Profile.objects.get(user=request.user)
+        request_project_name = request.data.get("project", "")
+        request_project_owner = request.data.get("owner", "")
+        request_project_is_shared = request.data.get("shared", "")
+        if (request_project_name == "") or \
+            (request_project_owner == "") or \
+            (request_project_is_shared == ""):
+            if request.user.is_anonymous or \
+                (not profile) or \
+                (not profile.last_project):
+                return Response(
+                    {'info': 'no project specified or session to restore'},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            project_name = profile.last_project.name
+            project_owner = profile.last_project.owner.username
+            project_is_shared = profile.last_project.is_shared
+        else:
+            # TODO: actually check this
+            project_name = request_project_name
+            project_owner = request_project_owner
+            project_is_shared = request_project_is_shared
+        if not project_is_shared and project_owner != request.user.username:
+            return Response(
+                {'info': 'you can\'t access that project'},
+                status=status.HTTP_403_FORBIDDEN,
             )
+        try:
+            project = Project.objects.get(
+                name=project_name,
+                owner__username=project_owner,
+                is_shared=project_is_shared,
+            )
+        except Exception:
+            return Response({'info': 'project doesn\'t exist'})
+        project_source_path = os.path.join(
+            project.get_path(),
+            settings.SOURCE_DIR,
+        )
+        project_files = os.listdir(project_source_path)
+        project_files.sort(key=lambda x: (os.path.isdir(
+            os.path.join(project_source_path, x)), x))
+        default_file = project_files[0]
 
-            # get a file from the project
-            project_files = os.listdir(project_source_path)
-            project_files.sort(key=lambda x: (os.path.isdir(
-                os.path.join(project_source_path, x)), x))
-            default_file = project_files[0]
-
+        default_project_file_path = os.path.join(
+            project_source_path,
+            default_file,
+        )
+        if profile and profile.last_module:
             project_file_path = os.path.join(
                 project_source_path,
-                default_file,
+                os.path.relpath(
+                    profile.last_module.source.name,
+                    start=project_source_path,
+                ),
             )
-            response_scene = ""
+            if not os.path.exists(project_file_path):
+                project_file_path = default_project_file_path
         else:
-            profile = Profile.objects.get(user=request.user)
-            if not project_name:
-                if profile.last_project:
-                    project_name = profile.last_project.name
-                else:
-                    project_name = settings.DEFAULT_PROJECT
-
-            # if the user doesn't have this project, create it here
-            if not Project.objects.filter(
-                owner=request.user,
-                name=project_name,
-            ).exists():
-                project_serializer = ProjectSerializer(data={
-                    'name': project_name,
-                    'owner': request.user.pk,
-                })
-                project_serializer.is_valid(raise_exception=True)
-                new_project = project_serializer.save(base_project=project_name)
-
-            response_data = {'username': request.user.username}
-            # restore previous session
-            # TODO: only allow path-friendly characters for everything
-            project_source_path = os.path.join(
-                settings.MEDIA_ROOT,
-                settings.USER_MEDIA_DIR,
-                request.user.username,
-                settings.PROJECT_DIR,
-                project_name,
-                settings.SOURCE_DIR,
-            )
-
-            # get a file from the project (TODO: refactor from anonymous case)
-            project_files = os.listdir(project_source_path)
-            project_files.sort(key=lambda x: (os.path.isdir(
-                os.path.join(project_source_path, x)), x))
-            default_file = project_files[0]
-
-            if profile.last_module:
-                project_file_path = os.path.join(
-                    project_source_path,
-                    os.path.relpath(
-                        profile.last_module.source.name,
-                        start=project_source_path,
-                    ),
-                )
-                if not os.path.exists(project_file_path):
-                    project_file_path = os.path.join(
-                        project_source_path,
-                        default_file,
-                    )
-            else:
-                project_file_path = os.path.join(
-                    project_source_path,
-                    default_file,
-                )
+            project_file_path = default_project_file_path
 
 
-            if profile.last_scene:
-                response_scene = profile.last_scene
-            else:
-                response_scene = ""
+        if profile and profile.last_scene:
+            response_scene = profile.last_scene
+        else:
+            response_scene = ""
 
         with open(project_file_path) as response_file:
-            response_data.update({
+            response_data = {
+                'username': '' if request.user.is_anonymous
+                                else request.user.username,
                 'filename': os.path.basename(project_file_path),
                 'code': response_file.read(),
                 'scene': response_scene,
-                'files': [LIBRARY_DIR_ENTRY] +
-                list_directory_contents(project_source_path, project_name),
-                'project': project_name,
-            })
+                'files': [LIBRARY_DIR_ENTRY] + \
+                         list_directory_contents(
+                             project_source_path,
+                         ),
+                'project_name': project_name,
+                'project_owner': project_owner,
+                'project_is_shared': project_is_shared,
+            }
         return Response(response_data)
 
+class GetUsername(generics.GenericAPIView):
+    authentication_classes = (JWTAuthentication,)
+    permission_classes = ()
+
+    def post(self, request):
+        return Response({'username': request.user.username})
 
 class VideoAuth(generics.GenericAPIView):
     authentication_classes = (JWTAuthentication,)
@@ -286,33 +263,122 @@ class VideoAuth(generics.GenericAPIView):
 
 class Render(generics.GenericAPIView):
     authentication_classes = (JWTAuthentication,)
-    permission_classes = (IsAuthenticated,)
+    permission_classes = ()
 
     def post(self, request):
-        input_filename = request.data["filename"]
-        input_scene = request.data["scene"]
-        if input_scene is None:
-            return Response({'info': 'no scene specified'})
+        request_filepath = request.data['filepath']
+        request_project_name = request.data['project']
+        request_project_owner = request.data['owner']
+        request_project_shared = request.data['shared']
+        request_scene = request.data['scene']
+        request_resolution = request.data['resolution']
+
+        if not request_project_shared and request.user.is_anonymous:
+            return Response(status=status.HTTP_401_UNAUTHORIZED)
+
+        if not request_project_shared and request_project_owner != request.user.username:
+            return Response(
+                {'info': 'you can\'t access that project'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        try:
+            project = Project.objects.get(
+                name=request_project_name,
+                owner__username=request_project_owner,
+                is_shared=request_project_shared,
+            )
+        except Exception:
+            return Response({'info': 'project doesn\'t exist'})
+        ## TODO: add a way for Module to detect if a path matches its file,
+        ## then get a Module instead
+        container_filepath = os.path.join(
+            settings.MEDIA_ROOT,
+            get_valid_media_path(
+                project.name,
+                project.owner.username, 
+                request_filepath,
+                is_shared=request_project_shared,
+            )
+        )
+        server_filepath = os.path.join(
+            os.environ['DJANGO_MEDIA_ROOT'],
+            os.path.relpath(
+                container_filepath,
+                start=settings.MEDIA_ROOT,
+            )
+        )
+        server_source_path = os.path.join(
+            os.environ['DJANGO_MEDIA_ROOT'],
+            os.path.relpath(
+                project.get_source_path(),
+                start=settings.MEDIA_ROOT,
+            )
+        ) + os.sep
+        server_video_path = os.path.join(
+            server_source_path[:-len(settings.SOURCE_DIR)],
+            settings.VIDEO_DIR,
+        )
+        container_video_path = os.path.join(
+            settings.MEDIA_ROOT,
+            os.path.relpath(
+                server_video_path,
+                start=os.environ['DJANGO_MEDIA_ROOT']
+            ),
+        )
+        os.makedirs(container_video_path, exist_ok=True)
+
+        resolution_dict = collections.defaultdict(
+            lambda: "480p15", {
+                "1440p": "1440p60",
+                "1080p": "1080p60",
+                "720p": "720p30",
+                "480p": "480p15",
+            }
+        )
+
+        server_video_output_path = os.path.join(
+            server_video_path,
+            os.path.relpath(
+                os.path.splitext(container_filepath)[0],
+                project.get_source_path(),
+            ),
+            resolution_dict[request_resolution],
+            request_scene,
+        )
+        if request_project_shared:
+            container_video_output_path = os.path.join(
+                settings.MEDIA_ROOT,
+                os.path.relpath(
+                    server_video_output_path,
+                    os.environ['DJANGO_MEDIA_ROOT'],
+                )
+            )
+            if os.path.exists(os.path.join(
+                container_video_output_path,
+                request_scene + '.mp4',
+            )):
+                return Response({
+                    'info': 'cached',
+                    'location': os.path.join(
+                        os.path.relpath(
+                            server_video_output_path,
+                            os.environ['DJANGO_MEDIA_ROOT'],
+                        ),
+                        request_scene + '.mp4',
+                    ),
+                })
 
         # enqueue the job
-        manim_path = os.path.join(
-            os.environ['DJANGO_MEDIA_ROOT'],
-            settings.LIBRARY_DIR,
-        )
-        project_path = os.path.join(
-            os.environ['DJANGO_MEDIA_ROOT'],
-            settings.USER_MEDIA_DIR,
-            request.user.username,
-            settings.PROJECT_DIR,
-            request.data['project'],
-        )
         q = Queue(connection=Redis(host=settings.REDIS_HOST))
         result = q.enqueue(
             'manimjob.render_scene',
-            input_filename,
-            input_scene,
-            manim_path,
-            project_path,
+            server_source_path,
+            os.path.relpath(server_filepath, start=server_source_path),
+            request_scene,
+            server_video_output_path,
+            server_source_path[:-len(settings.SOURCE_DIR)] + "tex/",
+            request_resolution,
+            job_timeout=210,
         )
 
         response_data = request.data
@@ -333,8 +399,27 @@ class CheckRenderJob(generics.GenericAPIView):
                 'result': job.result,
             }
             if job.status == 'finished':
-                response_data['scene'] = job.args[1]
-                response_data['filename'] = job.args[0]
+                if job.result['stdout'] and \
+                    len(job.result['stdout'].split()) >= 4 and \
+                    job.result['stdout'].split()[-4]:
+                    manim_container_video_path = job.result['stdout'].split()[-4]
+                    worker_container_video_path = job.args[3]
+                    media_video_path = os.path.join(
+                        os.path.relpath(
+                            worker_container_video_path,
+                            start=os.environ['DJANGO_MEDIA_ROOT'],
+                        ),
+                        os.path.relpath(
+                            manim_container_video_path,
+                            start="/root/video/",
+                        ),
+                    )
+                    response_data['media_path'] = media_video_path
+                if 'Traceback' in job.result['stderr']:
+                    response_data['result']['returncode'] = 1
+                response_data['filename'] = job.args[1]
+                response_data['scene'] = job.args[2]
+                response_data['resolution'] = job.args[5]
             return Response(response_data)
         else:
             return Response({'status': 'unknown scene'})
@@ -355,7 +440,8 @@ class Save(generics.GenericAPIView):
         try:
             project = Project.objects.get(
                 owner=request.user,
-                name=request.data['project']
+                name=request.data['project'],
+                is_shared=False,
             )
         except Exception:
             return Response(
@@ -368,6 +454,7 @@ class Save(generics.GenericAPIView):
                 project.name,
                 request.user.username,
                 request.data['name'],
+                is_directory=request.data['directory'],
             )
         except Exception:
             return Response(
@@ -456,35 +543,26 @@ class Files(generics.GenericAPIView):
     def post(self, request):
         # TODO: secure directory construction (factor from models.Module)
         # TODO: check if the project is shared, if so read from shared data
-        project = request.data['project']
-        if project == "manim":
-            source_dir = settings.LIBRARY_DIR
-        elif request.user.is_anonymous:
-            # read from shared
-            source_dir = os.path.join(
-                settings.MEDIA_ROOT,
-                settings.SHARED_MEDIA_DIR,
-                settings.PROJECT_DIR,
-                project,
-                settings.SOURCE_DIR,
-            )
+        request_path_list = request.data['pathList']
+        if request_path_list[0] == 'manimlib':
+            source_dir = settings.MANIM_PATH
         else:
-            # read from user files
-            # TODO: fails if a user looks for a non-manim shared project
-            source_dir = os.path.join(
-                settings.MEDIA_ROOT,
-                settings.USER_MEDIA_DIR,
-                request.user.username,
-                settings.PROJECT_DIR,
-                project,
-                settings.SOURCE_DIR,
+            request_project = request.data['project']
+            request_owner = request.data['owner']
+            request_shared = request.data['shared']
+            if not request_shared and request_owner != request.user.username:
+                return Response(
+                    {'info': 'you can\'t access that project'},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            project = Project.objects.get(
+                name=request_project,
+                owner__username=request_owner,
+                is_shared=request_shared,
             )
-        path = os.path.join(*request.data['pathList'])
-        path = os.path.join(
-            settings.MEDIA_ROOT,
-            source_dir,
-            path,
-        )
+            source_dir = os.path.join(project.get_path(), settings.SOURCE_DIR)
+        path_from_source = os.path.join(*request_path_list)
+        path = os.path.join(source_dir, path_from_source)
 
         shared_dir = os.path.join(
             settings.MEDIA_ROOT,
@@ -507,7 +585,7 @@ class Files(generics.GenericAPIView):
             return Response({'info': 'no'})
 
         if os.path.isdir(path):
-            return Response(list_directory_contents(path, project))
+            return Response(list_directory_contents(path))
         else:
             return Response(get_file_contents(path))
 
@@ -558,7 +636,7 @@ class ProjectDelete(generics.DestroyAPIView):
                 'code': response_file.read(),
                 'scene': settings.DEFAULT_PROJECT_SCENE,
                 'files': [LIBRARY_DIR_ENTRY] +
-                list_directory_contents(project_source_path, new_project.name),
+                list_directory_contents(project_source_path),
                 'project': new_project.name,
             })
         return Response(response_data)
@@ -574,15 +652,27 @@ class ModuleDelete(generics.DestroyAPIView):
 
     def get_object(self):
         project_name = self.request.query_params['project']
-        user = self.request.user
-        project = Project.objects.get(owner=user, name=project_name)
+        project_owner = self.request.query_params['owner']
+        project_shared = (self.request.query_params['shared'] == '1')
+        if project_owner != self.request.user.username:
+            return Response(
+                {'info': 'you can\'t access that project'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        project = Project.objects.get(
+            name=project_name,
+            owner=self.request.user,
+            is_shared=project_shared,
+        )
         file_path = self.request.query_params['name']
-        file_path = os.path.relpath(
-            os.path.join(project.get_source_path(), file_path),
-            settings.MEDIA_ROOT,
+        file_path = get_valid_media_path(
+            project_name,
+            self.request.user.username,
+            file_path,
+            is_shared=project_shared,
         )
         return Module.objects.get(
-            owner=user,
+            owner=self.request.user,
             project=project,
             source=file_path,
         )
@@ -593,6 +683,8 @@ class ModuleDelete(generics.DestroyAPIView):
                 request.query_params['project'],
                 request.user.username,
                 request.query_params['name'],
+                is_shared=request.query_params['shared'] == 1,
+                is_directory=True,
             )
             media_path = os.path.join(settings.MEDIA_ROOT, directory_path)
             shutil.rmtree(media_path)
@@ -602,7 +694,8 @@ class ModuleDelete(generics.DestroyAPIView):
             return super(ModuleDelete, self).delete(request, *args, **kwargs)
 
 
-def list_directory_contents(path, project):
+# TODO: only fetch the top layer of files
+def list_directory_contents(path):
     ret = []
     entries = os.listdir(path)
     entries.sort(key=lambda x:
@@ -615,12 +708,10 @@ def list_directory_contents(path, project):
             obj = {
                 'name': entry,
                 'directory': os.path.isdir(os.path.join(path, entry)),
-                'project': project,
             }
             if os.path.isdir(os.path.join(path, entry)):
                 obj['children'] = list_directory_contents(
                     os.path.join(path, entry),
-                    project,
                 )
         ret.append(obj)
     return ret
@@ -635,9 +726,54 @@ class Projects(generics.GenericAPIView):
     permission_classes = ()
 
     def get(self, request):
-        projects = os.listdir(settings.SHARED_PROJECTS_PATH)
-        projects.sort(
-            key=lambda x:
-                (os.path.isfile(os.path.join(settings.SHARED_PROJECTS_PATH, x)), x)
+        if request.query_params['shared'] == '1':
+            query = Project.objects.filter(is_shared=True)
+        elif not request.user.is_anonymous:
+            query = Project.objects.filter(
+                owner__username=request.user.username,
+                is_shared=False,
+            )
+        else:
+            query = Project.objects.none()
+        return Response({
+            'projects': map(
+                lambda project: project.name, query,
+            ),
+            'owners': map(
+                lambda project: project.owner.username, query,
+            ),
+            'username': '' if request.user.is_anonymous else request.user.username,
+        })
+
+    def post(self, request):
+        if request.user.is_anonymous:
+            return Response({'info': 'no'})
+        request_source_project_name = request.data['projectName']
+        request_source_owner_username = request.data['projectOwner']
+        request_source_project_shared = request.data['projectShared']
+        request_dest_project_name = request.data['shareName']
+
+        project_serializer = ProjectSerializer(data={
+            'name': request_dest_project_name,
+            'owner': request.user.pk,
+            'is_shared': False if request_source_project_shared else True,
+        })
+        project_serializer.is_valid(raise_exception=True)
+        new_project = project_serializer.save(
+            base_project_pk=Project.objects.get(
+                owner__username=request_source_owner_username,
+                name=request_source_project_name,
+                is_shared=request_source_project_shared,
+            ).pk,
         )
-        return Response({'projects': projects})
+        return Response({'info': 'finished'})
+
+    def delete(self, request):
+        request_project_name = request.query_params['projectName']
+        request_project_shared = request.query_params['projectShared']
+        Project.objects.get(
+            name=request_project_name,
+            is_shared=True if request_project_shared == 'true' else False,
+            owner=request.user.pk,
+        ).delete()
+        return Response({'info': 'finished'})
