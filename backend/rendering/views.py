@@ -325,7 +325,6 @@ class Render(generics.GenericAPIView):
                 start=os.environ['DJANGO_MEDIA_ROOT']
             ),
         )
-        os.makedirs(container_video_path, exist_ok=True)
 
         resolution_dict = collections.defaultdict(
             lambda: "480p15", {
@@ -345,14 +344,14 @@ class Render(generics.GenericAPIView):
             resolution_dict[request_resolution],
             request_scene,
         )
-        if request_project_shared:
-            container_video_output_path = os.path.join(
-                settings.MEDIA_ROOT,
-                os.path.relpath(
-                    server_video_output_path,
-                    os.environ['DJANGO_MEDIA_ROOT'],
-                )
+        container_video_output_path = os.path.join(
+            settings.MEDIA_ROOT,
+            os.path.relpath(
+                server_video_output_path,
+                os.environ['DJANGO_MEDIA_ROOT'],
             )
+        )
+        if request_project_shared:
             if os.path.exists(os.path.join(
                 container_video_output_path,
                 request_scene + '.mp4',
@@ -367,6 +366,16 @@ class Render(generics.GenericAPIView):
                         request_scene + '.mp4',
                     ),
                 })
+        server_tex_path = server_source_path[:-len(settings.SOURCE_DIR)] + "tex/"
+        container_tex_path = os.path.join(
+            settings.MEDIA_ROOT,
+            os.path.relpath(
+                server_tex_path,
+                os.environ['DJANGO_MEDIA_ROOT'],
+            )
+        )
+        os.makedirs(container_video_output_path, exist_ok=True)
+        os.makedirs(container_tex_path, exist_ok=True)
 
         # enqueue the job
         q = Queue(connection=Redis(host=settings.REDIS_HOST))
@@ -376,7 +385,7 @@ class Render(generics.GenericAPIView):
             os.path.relpath(server_filepath, start=server_source_path),
             request_scene,
             server_video_output_path,
-            server_source_path[:-len(settings.SOURCE_DIR)] + "tex/",
+            server_tex_path,
             request_resolution,
             job_timeout=210,
         )
